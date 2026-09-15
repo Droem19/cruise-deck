@@ -1,0 +1,22 @@
+{
+    "name": "api",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "types": "./src/lambdas/auth.ts",
+    "scripts": {
+        "dev": "tsx watch src/local.ts",
+        "typecheck": "tsc --project tsconfig.json --noEmit"
+    },
+    "dependencies": {
+        "@aws-sdk/client-cognito-identity-provider": "^3.1105.0",
+        "@hono/node-server": "^1.19.6",
+        "aws-jwt-verify": "^5.2.1",
+        "hono": "^4.10.5"
+    },
+    "devDependencies": {
+        "@types/node": "24.12.0",
+        "tsx": "^4.21.0",
+        "typescript": "^5.9.3"
+    }
+}

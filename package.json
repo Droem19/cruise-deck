@@ -1,0 +1,38 @@
+{
+    "name": "cruise-deck",
+    "description": "Cruise Deck full-stack React app with login and authentication",
+    "private": true,
+    "packageManager": "pnpm@10.28.2",
+    "engines": {
+        "node": "24.12.0",
+        "pnpm": "10.28.2"
+    },
+    "engineStrict": true,
+    "scripts": {
+        "local": "pnpm --parallel --filter api --filter ui dev",
+        "local-api": "pnpm --filter api dev",
+        "local-ui": "pnpm --filter ui dev",
+
+        "build": "pnpm --recursive --if-present build",
+        "typecheck": "pnpm --recursive --if-present typecheck",
+        "format": "biome check --write .",
+
+        "sso": "aws sso login --profile DRoemhildt19",
+
+        "infra-prepare": "pnpm --filter ui build",
+
+        "presynth": "pnpm infra-prepare",
+        "synth": "pnpm --filter infra exec cdk synth --profile DRoemhildt19",
+
+        "prediff": "pnpm infra-prepare",
+        "diff": "pnpm --filter infra exec cdk diff cruise-deck-api cruise-deck-ui --profile DRoemhildt19",
+
+        "predeploy": "pnpm infra-prepare",
+        "deploy": "pnpm --filter infra exec cdk deploy cruise-deck-api cruise-deck-ui --profile DRoemhildt19 --require-approval never",
+        "github-action-deploy": "biome check . && pnpm run typecheck && pnpm run build && pnpm --filter infra exec cdk deploy cruise-deck-api cruise-deck-ui --require-approval never"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "2.5.5",
+        "esbuild": "^0.27.2"
+    }
+}

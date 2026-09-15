@@ -1,0 +1,97 @@
+{
+    "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
+    "vcs": {
+        "enabled": true,
+        "clientKind": "git",
+        "useIgnoreFile": true
+    },
+    "files": {
+        "includes": [
+            "**",
+            "!node_modules",
+            "!**/node_modules",
+            "!.vscode",
+            "!**/.vscode",
+            "!cdk.out",
+            "!**/cdk.out",
+            "!dist",
+            "!**/dist",
+            "!build",
+            "!**/build"
+        ]
+    },
+    "formatter": {
+        "enabled": true,
+        "indentStyle": "space",
+        "indentWidth": 4,
+        "lineWidth": 120,
+        "lineEnding": "lf"
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "preset": "recommended",
+            "correctness": {
+                "noUnusedVariables": "error",
+                "noUnusedImports": "error"
+            },
+            "suspicious": {
+                "noExplicitAny": "warn"
+            },
+            "style": {
+                "useConst": "error",
+                "useTemplate": "error",
+                "noShoutyConstants": "warn"
+            },
+            "complexity": {
+                "useOptionalChain": "error"
+            }
+        }
+    },
+    "javascript": {
+        "formatter": {
+            "quoteStyle": "single",
+            "trailingCommas": "es5",
+            "semicolons": "always"
+        }
+    },
+    "html": {
+        "formatter": {
+            "enabled": true
+        }
+    },
+    "css": {
+        "parser": {
+            "tailwindDirectives": true
+        }
+    },
+    "json": {
+        "formatter": {
+            "enabled": true
+        },
+        "parser": {
+            "allowComments": true,
+            "allowTrailingCommas": true
+        }
+    },
+    "assist": {
+        "actions": {
+            "source": {
+                "organizeImports": {
+                    "level": "on",
+                    "options": {
+                        "groups": [
+                            ":PACKAGE:",
+                            ":BLANK_LINE:",
+                            ":NODE:",
+                            ":BLANK_LINE:",
+                            ["@api/**", "@ui/**"],
+                            ":BLANK_LINE:",
+                            ["./**"]
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}

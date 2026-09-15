@@ -1,0 +1,8 @@
+packages:
+  - ui
+  - infra
+  - api
+
+onlyBuiltDependencies:
+  - '@swc/core'
+  - esbuild

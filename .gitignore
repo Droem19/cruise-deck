@@ -1,0 +1,45 @@
+# dependencies
+node_modules
+
+# build output
+dist
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# local environment files
+.env
+.env.*
+!.env.example
+
+# editor directories and files
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# CDK-related generated files and directories
+.cdk.staging/
+cdk.out/
+cdk.context.json
+
+# temporary files
+*.tmp
+*.cache
+
+# Nx-related files
+.nx/cache
+.nx/workspace-data
+
+# TypeScript build info files
+*.tsbuildinfo
