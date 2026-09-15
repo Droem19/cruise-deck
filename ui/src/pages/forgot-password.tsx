@@ -241,7 +241,11 @@ function AuthShell({ children, title }: { children: React.ReactNode; title: stri
         <main className="grid min-h-svh place-items-center bg-stone-50 px-6 py-10 text-zinc-950">
             <section className="w-full max-w-sm">
                 <div className="flex justify-center">
-                    <img className="h-14 w-14 rounded-xl shadow-sm" alt="Cruise Deck" src="/CruiseDeck-Logo.png" />
+                    <img
+                        className="h-auto w-full max-w-72 object-contain"
+                        alt="Cruise Deck"
+                        src="/CruiseDeck-Banner.png"
+                    />
                 </div>
                 <div className="mt-5 rounded-lg border border-zinc-200 bg-white px-6 py-5 shadow-sm">
                     <h1 className="text-center text-xl font-semibold tracking-tight">{title}</h1>

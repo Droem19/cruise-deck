@@ -75,7 +75,7 @@ export class UIStack extends cdk.Stack {
             '    var uri = request.uri;',
             '',
             "    if (uri === '/favicon.ico') {",
-            "        request.uri = '/favicon.svg';",
+            "        request.uri = '/CruiseDeck-Logo.png';",
             '        return request;',
             '    }',
             '',
