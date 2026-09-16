@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, use, useCallback, useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router';
 
-import { type AuthUser, authApi, type SignUpRequest } from './api';
+import { type AuthUser, authApi, type SignUpRequest, type UpdateProfileRequest } from './api';
 
 type AuthContextValue = {
     user: AuthUser | null;
@@ -12,6 +12,7 @@ type AuthContextValue = {
     forgotPassword: (email: string) => Promise<string>;
     confirmForgotPassword: (email: string, code: string, password: string) => Promise<string>;
     refreshUser: () => Promise<boolean>;
+    updateProfile: (request: UpdateProfileRequest) => Promise<void>;
     logout: () => Promise<void>;
 };
 
@@ -58,6 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return response.message;
         },
         refreshUser,
+        updateProfile: async (request) => {
+            const response = await authApi.updateProfile(request);
+            setUser(response.user);
+        },
         logout: async () => {
             try {
                 await authApi.logout();

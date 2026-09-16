@@ -7,6 +7,7 @@ import type {
     EmailRequest,
     MessageResponse,
     SignUpRequest,
+    UpdateProfileRequest,
 } from './types';
 
 const readStringField = (body: unknown, fieldName: string) => {
@@ -42,6 +43,20 @@ export const signUpValidator = validator('json', (body, context) => {
     }
 
     return { email, password, firstName, lastName } satisfies SignUpRequest;
+});
+
+export const updateProfileValidator = validator('json', (body, context) => {
+    const firstName = readStringField(body, 'firstName');
+    const lastName = readStringField(body, 'lastName');
+
+    if (firstName === undefined && lastName === undefined) {
+        return context.json<MessageResponse>({ message: 'At least one profile field is required.' }, 400);
+    }
+
+    return {
+        ...(firstName !== undefined ? { firstName } : {}),
+        ...(lastName !== undefined ? { lastName } : {}),
+    } satisfies UpdateProfileRequest;
 });
 
 export const emailCodeValidator = validator('json', (body, context) => {

@@ -1,4 +1,13 @@
-import type { AuthApp, AuthResponse, AuthUser, MeResponse, MessageResponse, SignUpRequest, SignUpResponse } from 'api';
+import type {
+    AuthApp,
+    AuthResponse,
+    AuthUser,
+    MeResponse,
+    MessageResponse,
+    SignUpRequest,
+    SignUpResponse,
+    UpdateProfileRequest,
+} from 'api';
 import { hc } from 'hono/client';
 
 const apiUrl = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:8787' : window.location.origin);
@@ -96,6 +105,10 @@ export const authApi = {
         const response = await client.me.$get();
         return parseResponse<MeResponse>(response);
     },
+    updateProfile: async (request: UpdateProfileRequest) => {
+        const response = await client.me.$put({ json: request });
+        return parseResponse<AuthResponse>(response);
+    },
 };
 
-export type { AuthUser, SignUpRequest };
+export type { AuthUser, SignUpRequest, UpdateProfileRequest };

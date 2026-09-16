@@ -33,6 +33,11 @@ export type SignUpRequest = EmailPasswordRequest & {
     lastName: string;
 };
 
+export type UpdateProfileRequest = {
+    firstName?: string;
+    lastName?: string;
+};
+
 export type EmailCodeRequest = {
     email: string;
     code: string;

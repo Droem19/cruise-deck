@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 
 import type { AuthUser } from '../auth/api';
 import { useAuth } from '../auth/auth-context';
+
+const getNameParts = (user: AuthUser) => {
+    const fallback = formatFallbackName(user.email);
+    const nameParts = user.name?.trim().split(/\s+/) ?? [];
+
+    return {
+        firstName: user.givenName?.trim() || nameParts[0] || fallback,
+        lastName: user.familyName?.trim() || nameParts.slice(1).join(' '),
+    };
+};
 
 const formatFallbackName = (email: string) => {
     const localPart = email.split('@')[0] ?? '';
@@ -13,9 +23,24 @@ const formatFallbackName = (email: string) => {
     return `${firstPart.charAt(0).toUpperCase()}${firstPart.slice(1)}`;
 };
 
-const getDisplayName = (user: AuthUser) => formatFallbackName(user.email);
+const getDisplayName = (user: AuthUser) => {
+    const { firstName, lastName } = getNameParts(user);
 
-export function AppNavbar() {
+    return [firstName, lastName].filter(Boolean).join(' ');
+};
+
+const getInitials = (user: AuthUser) => {
+    const { firstName, lastName } = getNameParts(user);
+    const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.trim();
+
+    return initials.toUpperCase() || 'CD';
+};
+
+type AppNavbarProps = {
+    onProfileSelect?: () => void;
+};
+
+export function AppNavbar({ onProfileSelect }: AppNavbarProps) {
     const { logout, user } = useAuth();
     const navigate = useNavigate();
     const menuRef = useRef<HTMLDivElement>(null);
@@ -58,31 +83,33 @@ export function AppNavbar() {
         }
     };
 
+    const handleProfileClick = () => {
+        setIsMenuOpen(false);
+        onProfileSelect?.();
+    };
+
     if (!user) return null;
 
+    const displayName = getDisplayName(user);
+    const initials = getInitials(user);
+
     return (
-        <header className="border-b border-zinc-200 bg-white shadow-sm">
-            <nav
-                className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6"
-                aria-label="Main"
-            >
-                <Link className="flex items-center" to="/app">
-                    <img
-                        className="h-10 w-auto max-w-44 object-contain"
-                        alt="Cruise Deck"
-                        src="/CruiseDeck-Banner.png"
-                    />
-                </Link>
+        <header className="bg-white shadow-sm">
+            <nav className="flex h-16 w-full items-center justify-between gap-4 px-4 sm:px-6 lg:px-8" aria-label="Main">
+                <div />
 
                 <div className="relative shrink-0" ref={menuRef}>
                     <button
-                        className="inline-flex h-9 items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-100 focus:outline-none focus:ring-4 focus:ring-[#45AEFC]/25"
+                        className="inline-flex h-9 items-center gap-2 rounded-md bg-transparent text-sm font-semibold text-zinc-950 transition hover:text-[#0B65CA] focus:outline-none focus:ring-4 focus:ring-[#45AEFC]/25"
                         type="button"
                         aria-expanded={isMenuOpen}
                         aria-haspopup="menu"
                         onClick={() => setIsMenuOpen((current) => !current)}
                     >
-                        <span>{getDisplayName(user)}</span>
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#0B65CA] text-xs font-bold text-white">
+                            {initials}
+                        </span>
+                        <span>{displayName}</span>
                         <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path
                                 fillRule="evenodd"
@@ -94,12 +121,17 @@ export function AppNavbar() {
 
                     {isMenuOpen ? (
                         <div
-                            className="absolute right-0 z-10 mt-2 w-44 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg"
+                            className="absolute right-0 z-10 mt-2 w-40 overflow-hidden rounded-lg border border-zinc-200 bg-white py-1 shadow-lg"
                             role="menu"
                         >
-                            <p className="truncate border-b border-zinc-200 px-4 py-2 text-xs font-medium text-zinc-500">
-                                {user.email}
-                            </p>
+                            <button
+                                className="block w-full px-4 py-2 text-left text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-950 focus:bg-zinc-100 focus:outline-none"
+                                type="button"
+                                role="menuitem"
+                                onClick={handleProfileClick}
+                            >
+                                Profile
+                            </button>
                             <button
                                 className="block w-full px-4 py-2 text-left text-sm font-medium text-red-700 transition hover:bg-red-50 focus:bg-red-50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
                                 disabled={isSigningOut}
@@ -107,7 +139,7 @@ export function AppNavbar() {
                                 role="menuitem"
                                 onClick={handleLogout}
                             >
-                                {isSigningOut ? 'Signing out...' : 'Sign out'}
+                                {isSigningOut ? 'Logging out...' : 'Log Out'}
                             </button>
                         </div>
                     ) : null}
