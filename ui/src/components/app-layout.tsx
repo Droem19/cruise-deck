@@ -14,7 +14,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     return (
         <div className="flex min-h-svh bg-stone-50 text-zinc-950">
             <aside className="hidden w-60 shrink-0 border-r border-[#123A6D] bg-[#0B2E5D] p-4 text-white lg:flex lg:flex-col">
-                <div className="mx-auto mb-8 block w-44" aria-label="Cruise Deck">
+                <div className="mx-auto mb-8 block w-44">
                     <img className="h-auto w-full object-contain" alt="Cruise Deck" src="/CruiseDeck-Banner.png" />
                 </div>
 

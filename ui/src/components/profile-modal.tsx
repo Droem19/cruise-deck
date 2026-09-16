@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 
-import { useAuth } from '../auth/auth-context';
 import { AppModal } from './app-modal';
+import { useAuth } from '../auth/auth-context';
 
 type ProfileModalProps = {
     onClose: () => void;
