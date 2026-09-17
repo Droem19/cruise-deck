@@ -19,6 +19,28 @@ export type MessageResponse = {
     message: string;
 };
 
+export type UploadedOffer = {
+    offerId: string;
+    fileName: string;
+    sizeBytes: number;
+    uploadedAt: string;
+};
+
+export type ListOffersResponse = {
+    offers: UploadedOffer[];
+};
+
+export type UploadOffersResponse = {
+    offers: UploadedOffer[];
+};
+
+export type DownloadOfferResponse = {
+    offerId: string;
+    fileName: string;
+    downloadUrl: string;
+    expiresInSeconds: number;
+};
+
 export type SignUpResponse = MessageResponse & {
     userConfirmed: boolean;
 };

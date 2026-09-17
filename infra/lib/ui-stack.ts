@@ -107,6 +107,8 @@ export class UIStack extends cdk.Stack {
                 'auth/*': apiBehavior,
                 health: apiBehavior,
                 me: apiBehavior,
+                offers: apiBehavior,
+                'offers/*': apiBehavior,
             },
             domainNames,
             certificate,

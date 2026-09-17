@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
-import type { AuthUser } from '../auth/api';
+import type { AuthUser } from '../api/auth';
 import { useAuth } from '../auth/auth-context';
 
 const getNameParts = (user: AuthUser) => {

@@ -1,7 +1,7 @@
 import { createContext, type ReactNode, use, useCallback, useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router';
 
-import { type AuthUser, authApi, type SignUpRequest, type UpdateProfileRequest } from './api';
+import { type AuthUser, authApi, type SignUpRequest, type UpdateProfileRequest } from '../api/auth';
 
 type AuthContextValue = {
     user: AuthUser | null;

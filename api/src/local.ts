@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
 
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -8,7 +9,12 @@ if (existsSync(envPath)) {
     process.loadEnvFile(envPath);
 }
 
-const { app } = await import('./lambdas/auth.js');
+const { app: authApp } = await import('./lambdas/auth.js');
+const { app: offersApp } = await import('./lambdas/offers.js');
+const app = new Hono();
+
+app.route('/', offersApp);
+app.route('/', authApp);
 
 const port = Number.parseInt(process.env.PORT ?? '8787', 10);
 
