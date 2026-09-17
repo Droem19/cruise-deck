@@ -73,7 +73,9 @@ const routes = app
             });
         } catch (error) {
             if (error instanceof UsernameExistsException) {
-                throw new HTTPException(409, { message: 'An account with this email already exists.' });
+                throw new HTTPException(409, {
+                    message: 'An account with this email already exists.',
+                });
             }
 
             throw friendlyCognitoError(error) ?? error;
@@ -93,7 +95,9 @@ const routes = app
                 })
             );
 
-            return context.json<MessageResponse>({ message: 'Account verified. You can sign in now.' });
+            return context.json<MessageResponse>({
+                message: 'Account verified. You can sign in now.',
+            });
         } catch (error) {
             if (error instanceof UserNotFoundException) {
                 throw new HTTPException(404, { message: 'User not found.' });
@@ -115,7 +119,9 @@ const routes = app
                 })
             );
 
-            return context.json<MessageResponse>({ message: 'Verification code sent.' });
+            return context.json<MessageResponse>({
+                message: 'Verification code sent.',
+            });
         } catch (error) {
             if (error instanceof UserNotFoundException) {
                 throw new HTTPException(404, { message: 'User not found.' });
@@ -148,7 +154,9 @@ const routes = app
             }
 
             if (!result.AuthenticationResult) {
-                throw new HTTPException(500, { message: 'Authentication failed.' });
+                throw new HTTPException(500, {
+                    message: 'Authentication failed.',
+                });
             }
 
             const user = await setAuthenticationResultCookies(context, result.AuthenticationResult);
@@ -157,10 +165,14 @@ const routes = app
         } catch (error) {
             if (error instanceof HTTPException) throw error;
             if (error instanceof NotAuthorizedException || error instanceof UserNotFoundException) {
-                throw new HTTPException(401, { message: 'Invalid email or password.' });
+                throw new HTTPException(401, {
+                    message: 'Invalid email or password.',
+                });
             }
             if (error instanceof UserNotConfirmedException) {
-                throw new HTTPException(403, { message: 'Please verify your email before signing in.' });
+                throw new HTTPException(403, {
+                    message: 'Please verify your email before signing in.',
+                });
             }
 
             throw friendlyCognitoError(error) ?? error;
@@ -222,7 +234,9 @@ const routes = app
             }
         }
 
-        return context.json<MessageResponse>({ message: 'If the account exists, a password reset code was sent.' });
+        return context.json<MessageResponse>({
+            message: 'If the account exists, a password reset code was sent.',
+        });
     })
     .post('/auth/confirm-forgot-password', confirmForgotPasswordValidator, async (context) => {
         const { email, code, password } = context.req.valid('json');
@@ -239,10 +253,14 @@ const routes = app
                 })
             );
 
-            return context.json<MessageResponse>({ message: 'Password updated. You can sign in now.' });
+            return context.json<MessageResponse>({
+                message: 'Password updated. You can sign in now.',
+            });
         } catch (error) {
             if (error instanceof UserNotFoundException) {
-                throw new HTTPException(404, { message: 'User not found.' });
+                throw new HTTPException(404, {
+                    message: 'User not found.',
+                });
             }
 
             throw friendlyCognitoError(error) ?? error;
@@ -283,14 +301,19 @@ export type {
     AuthResponse,
     AuthUser,
     ConfirmForgotPasswordRequest,
+    CreateTravelerRequest,
     EmailCodeRequest,
     EmailPasswordRequest,
     EmailRequest,
+    ListTravelersResponse,
     MeResponse,
     MessageResponse,
     SignUpRequest,
     SignUpResponse,
+    Traveler,
+    TravelerResponse,
     UpdateProfileRequest,
+    UpdateTravelerRequest,
 } from '../contracts/types';
 
 export const handler = handle(app);

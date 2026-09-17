@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import {
     aws_apigatewayv2 as apigatewayv2,
     aws_cognito as cognito,
+    aws_dynamodb as dynamodb,
     aws_lambda as lambda,
     aws_lambda_nodejs as lambdaNodejs,
     aws_s3 as s3,
@@ -105,9 +106,19 @@ export class APIStack extends cdk.Stack {
             removalPolicy: cdk.RemovalPolicy.RETAIN,
         });
 
+        const dataTable = new dynamodb.Table(this, 'CruiseDeckDataTable', {
+            tableName: `cruise-deck-data-${this.account}-${this.region}`,
+            partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
+            sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
+            billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+            pointInTimeRecovery: true,
+            removalPolicy: cdk.RemovalPolicy.RETAIN,
+        });
+
         const stackSourceDir = path.dirname(fileURLToPath(import.meta.url));
         const authLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/auth.ts');
         const offersLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/offers.ts');
+        const travelersLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/travelers.ts');
 
         const allowedOrigins = [
             `https://${props.siteDomain}`,
@@ -149,7 +160,25 @@ export class APIStack extends cdk.Stack {
             },
         });
 
+        const travelersLambda = new lambdaNodejs.NodejsFunction(this, 'TravelersLambda', {
+            functionName: 'cruise-deck-travelers',
+            entry: travelersLambdaEntry,
+            handler: 'handler',
+            runtime: lambda.Runtime.NODEJS_22_X,
+            architecture: lambda.Architecture.ARM_64,
+            memorySize: 512,
+            timeout: cdk.Duration.seconds(10),
+            environment: {
+                ALLOWED_ORIGINS: allowedOrigins,
+                USER_POOL_ID: userPool.userPoolId,
+                USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
+                USER_POOL_REGION: this.region,
+                CRUISE_DECK_DATA_TABLE_NAME: dataTable.tableName,
+            },
+        });
+
         offersBucket.grantReadWrite(offersLambda);
+        dataTable.grantReadWriteData(travelersLambda);
 
         this.api = new apigatewayv2.HttpApi(this, 'AuthApi', {
             apiName: 'cruise-deck-api',
@@ -174,6 +203,7 @@ export class APIStack extends cdk.Stack {
 
         const lambdaIntegration = new HttpLambdaIntegration('AuthLambdaIntegration', authLambda);
         const offersLambdaIntegration = new HttpLambdaIntegration('OffersLambdaIntegration', offersLambda);
+        const travelersLambdaIntegration = new HttpLambdaIntegration('TravelersLambdaIntegration', travelersLambda);
 
         this.api.addRoutes({
             path: '/{proxy+}',
@@ -204,6 +234,18 @@ export class APIStack extends cdk.Stack {
             integration: offersLambdaIntegration,
         });
 
+        this.api.addRoutes({
+            path: '/travelers',
+            methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
+            integration: travelersLambdaIntegration,
+        });
+
+        this.api.addRoutes({
+            path: '/travelers/{travelerId}',
+            methods: [apigatewayv2.HttpMethod.DELETE, apigatewayv2.HttpMethod.PUT],
+            integration: travelersLambdaIntegration,
+        });
+
         new cdk.CfnOutput(this, 'UserPoolIdOutput', {
             value: userPool.userPoolId,
             description: 'Cognito user pool ID',
@@ -217,6 +259,11 @@ export class APIStack extends cdk.Stack {
         new cdk.CfnOutput(this, 'OffersBucketNameOutput', {
             value: offersBucket.bucketName,
             description: 'Private uploaded offers bucket name',
+        });
+
+        new cdk.CfnOutput(this, 'CruiseDeckDataTableNameOutput', {
+            value: dataTable.tableName,
+            description: 'CruiseDeck application data table name',
         });
     }
 }

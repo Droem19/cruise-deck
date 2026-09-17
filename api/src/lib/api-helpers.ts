@@ -25,7 +25,7 @@ export const corsMiddleware = cors({
     origin: getAllowedOrigins(),
     credentials: true,
     allowHeaders: ['Authorization', 'Content-Type'],
-    allowMethods: ['GET', 'POST', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 });
 
 export const errorHandler = (error: Error, context: Context) => {

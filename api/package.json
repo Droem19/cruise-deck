@@ -3,14 +3,16 @@
     "private": true,
     "version": "0.1.0",
     "type": "module",
-    "types": "./src/lambdas/auth.ts",
+    "types": "./src/index.ts",
     "scripts": {
         "dev": "tsx watch src/local.ts",
         "typecheck": "tsc --project tsconfig.json --noEmit"
     },
     "dependencies": {
         "@aws-sdk/client-cognito-identity-provider": "^3.1105.0",
+        "@aws-sdk/client-dynamodb": "^3.1134.0",
         "@aws-sdk/client-s3": "^3.1133.0",
+        "@aws-sdk/lib-dynamodb": "^3.1134.0",
         "@aws-sdk/s3-request-presigner": "^3.1133.0",
         "@hono/node-server": "^1.19.6",
         "aws-jwt-verify": "^5.2.1",

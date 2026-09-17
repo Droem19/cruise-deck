@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 
 import { AuthProvider, RequireAuth } from './auth/auth-context';
 import { AppPage } from './pages/app';
@@ -9,7 +9,7 @@ import { HomePage } from './pages/home';
 import { NotFoundPage } from './pages/not-found';
 import { OffersPage } from './pages/offers';
 import { SignUpPage } from './pages/sign-up';
-import { UsersPage } from './pages/users';
+import { TravelersPage } from './pages/travelers';
 import { VerifyEmailPage } from './pages/verify-email';
 
 import './index.css';
@@ -43,13 +43,14 @@ createRoot(rootElement).render(
                         }
                     />
                     <Route
-                        path="/users"
+                        path="/travelers"
                         element={
                             <RequireAuth>
-                                <UsersPage />
+                                <TravelersPage />
                             </RequireAuth>
                         }
                     />
+                    <Route path="/users" element={<Navigate to="/travelers" replace />} />
                     <Route path="*" element={<NotFoundPage />} />
                 </Routes>
             </AuthProvider>

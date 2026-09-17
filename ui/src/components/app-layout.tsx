@@ -49,9 +49,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                                 isActive ? 'bg-[#45AEFC] text-[#061A33]' : 'text-blue-50 hover:bg-white/10',
                             ].join(' ')
                         }
-                        to="/users"
+                        to="/travelers"
                     >
-                        Users
+                        Travelers
                     </NavLink>
                 </nav>
             </aside>
@@ -93,9 +93,9 @@ export function AppLayout({ children }: AppLayoutProps) {
                                 isActive ? 'bg-[#0B65CA] text-white' : 'bg-zinc-100 text-zinc-700 hover:bg-zinc-200',
                             ].join(' ')
                         }
-                        to="/users"
+                        to="/travelers"
                     >
-                        Users
+                        Travelers
                     </NavLink>
                 </nav>
 

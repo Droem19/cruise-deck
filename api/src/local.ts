@@ -11,9 +11,11 @@ if (existsSync(envPath)) {
 
 const { app: authApp } = await import('./lambdas/auth.js');
 const { app: offersApp } = await import('./lambdas/offers.js');
+const { app: travelersApp } = await import('./lambdas/travelers.js');
 const app = new Hono();
 
 app.route('/', offersApp);
+app.route('/', travelersApp);
 app.route('/', authApp);
 
 const port = Number.parseInt(process.env.PORT ?? '8787', 10);
