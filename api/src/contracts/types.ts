@@ -19,6 +19,31 @@ export type MessageResponse = {
     message: string;
 };
 
+export type Traveler = {
+    travelerId: string;
+    firstName: string;
+    lastName: string;
+    createdAt: string;
+};
+
+export type ListTravelersResponse = {
+    travelers: Traveler[];
+};
+
+export type TravelerResponse = {
+    traveler: Traveler;
+};
+
+export type CreateTravelerRequest = {
+    firstName: string;
+    lastName: string;
+};
+
+export type UpdateTravelerRequest = {
+    firstName?: string;
+    lastName?: string;
+};
+
 export type UploadedOffer = {
     offerId: string;
     fileName: string;

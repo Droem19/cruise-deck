@@ -1,4 +1,4 @@
-import * as cdk from 'aws-cdk-lib';
+import * as cdk from "aws-cdk-lib";
 import {
     aws_certificatemanager as acm,
     aws_cloudfront as cloudfront,
@@ -7,11 +7,11 @@ import {
     aws_route53_targets as route53Targets,
     aws_s3 as s3,
     aws_s3_deployment as s3deploy,
-} from 'aws-cdk-lib';
-import type { Construct } from 'constructs';
+} from "aws-cdk-lib";
+import type { Construct } from "constructs";
 
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 type UIStackProps = cdk.StackProps & {
     apiEndpoint: string;
@@ -24,18 +24,25 @@ export class UIStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: UIStackProps) {
         super(scope, id, props);
 
-        if (!cdk.Token.isUnresolved(this.region) && this.region !== 'us-east-1') {
+        if (
+            !cdk.Token.isUnresolved(this.region) &&
+            this.region !== "us-east-1"
+        ) {
             throw new Error(
-                'CloudFront certificates must live in us-east-1. Deploy this stack with CDK_DEFAULT_REGION=us-east-1.'
+                "CloudFront certificates must live in us-east-1. Deploy this stack with CDK_DEFAULT_REGION=us-east-1.",
             );
         }
 
-        const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, 'HostedZone', {
-            hostedZoneId: props.hostedZoneId,
-            zoneName: props.rootDomain,
-        });
+        const hostedZone = route53.HostedZone.fromHostedZoneAttributes(
+            this,
+            "HostedZone",
+            {
+                hostedZoneId: props.hostedZoneId,
+                zoneName: props.rootDomain,
+            },
+        );
 
-        const siteBucket = new s3.Bucket(this, 'SiteBucket', {
+        const siteBucket = new s3.Bucket(this, "SiteBucket", {
             encryption: s3.BucketEncryption.S3_MANAGED,
             blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
             publicReadAccess: false,
@@ -48,17 +55,20 @@ export class UIStack extends cdk.Stack {
         const wwwSiteDomain = `www.${props.siteDomain}`;
         const domainNames = [props.siteDomain, wwwSiteDomain];
 
-        cdk.Tags.of(this).add('Project', this.stackName);
-        cdk.Tags.of(this).add('SiteDomain', props.siteDomain);
-        cdk.Tags.of(this).add('WwwSiteDomain', wwwSiteDomain);
+        cdk.Tags.of(this).add("Project", this.stackName);
+        cdk.Tags.of(this).add("SiteDomain", props.siteDomain);
+        cdk.Tags.of(this).add("WwwSiteDomain", wwwSiteDomain);
 
-        const certificate = new acm.Certificate(this, 'SiteCertificate', {
+        const certificate = new acm.Certificate(this, "SiteCertificate", {
             domainName: props.siteDomain,
             subjectAlternativeNames: [wwwSiteDomain],
             validation: acm.CertificateValidation.fromDns(hostedZone),
         });
 
-        const apiDomainName = cdk.Fn.select(2, cdk.Fn.split('/', props.apiEndpoint));
+        const apiDomainName = cdk.Fn.select(
+            2,
+            cdk.Fn.split("/", props.apiEndpoint),
+        );
         const apiOrigin = new origins.HttpOrigin(apiDomainName, {
             protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
         });
@@ -66,35 +76,43 @@ export class UIStack extends cdk.Stack {
             origin: apiOrigin,
             allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
             cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-            originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+            originRequestPolicy:
+                cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
         };
 
         const spaRewriteCode = [
-            'function handler(event) {',
-            '    var request = event.request;',
-            '    var uri = request.uri;',
-            '',
+            "function handler(event) {",
+            "    var request = event.request;",
+            "    var uri = request.uri;",
+            "",
             "    if (uri === '/favicon.ico') {",
             "        request.uri = '/CruiseDeck-Logo.png';",
-            '        return request;',
-            '    }',
-            '',
+            "        return request;",
+            "    }",
+            "",
             "    if (uri !== '/' && uri.indexOf('.') === -1) {",
             "        request.uri = '/index.html';",
-            '    }',
-            '',
-            '    return request;',
-            '}',
-        ].join('\n');
+            "    }",
+            "",
+            "    return request;",
+            "}",
+        ].join("\n");
 
-        const spaRewriteFunction = new cloudfront.Function(this, 'SpaRewriteFunction', {
-            code: cloudfront.FunctionCode.fromInline(spaRewriteCode),
-        });
+        const spaRewriteFunction = new cloudfront.Function(
+            this,
+            "SpaRewriteFunction",
+            {
+                code: cloudfront.FunctionCode.fromInline(spaRewriteCode),
+            },
+        );
 
-        const distribution = new cloudfront.Distribution(this, 'Distribution', {
+        const distribution = new cloudfront.Distribution(this, "Distribution", {
             defaultBehavior: {
-                origin: origins.S3BucketOrigin.withOriginAccessControl(siteBucket),
-                viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                origin: origins.S3BucketOrigin.withOriginAccessControl(
+                    siteBucket,
+                ),
+                viewerProtocolPolicy:
+                    cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                 cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
                 functionAssociations: [
                     {
@@ -104,72 +122,85 @@ export class UIStack extends cdk.Stack {
                 ],
             },
             additionalBehaviors: {
-                'auth/*': apiBehavior,
+                "auth/*": apiBehavior,
                 health: apiBehavior,
                 me: apiBehavior,
                 offers: apiBehavior,
-                'offers/*': apiBehavior,
+                "offers/*": apiBehavior,
+                travelers: apiBehavior,
+                "travelers/*": apiBehavior,
             },
             domainNames,
             certificate,
-            defaultRootObject: 'index.html',
-            minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
+            defaultRootObject: "index.html",
+            minimumProtocolVersion:
+                cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
             enableLogging: true,
         });
 
         const primaryRecordName =
-            props.siteDomain === props.rootDomain ? undefined : props.siteDomain.replace(`.${props.rootDomain}`, '');
-        const wwwRecordName = wwwSiteDomain.replace(`.${props.rootDomain}`, '');
+            props.siteDomain === props.rootDomain
+                ? undefined
+                : props.siteDomain.replace(`.${props.rootDomain}`, "");
+        const wwwRecordName = wwwSiteDomain.replace(`.${props.rootDomain}`, "");
 
-        new route53.ARecord(this, 'PrimaryDomainARecord', {
+        new route53.ARecord(this, "PrimaryDomainARecord", {
             zone: hostedZone,
             recordName: primaryRecordName,
-            target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution)),
+            target: route53.RecordTarget.fromAlias(
+                new route53Targets.CloudFrontTarget(distribution),
+            ),
         });
 
-        new route53.AaaaRecord(this, 'PrimaryDomainAaaaRecord', {
+        new route53.AaaaRecord(this, "PrimaryDomainAaaaRecord", {
             zone: hostedZone,
             recordName: primaryRecordName,
-            target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution)),
+            target: route53.RecordTarget.fromAlias(
+                new route53Targets.CloudFrontTarget(distribution),
+            ),
         });
 
-        new route53.ARecord(this, 'WwwDomainARecord', {
+        new route53.ARecord(this, "WwwDomainARecord", {
             zone: hostedZone,
             recordName: wwwRecordName,
-            target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution)),
+            target: route53.RecordTarget.fromAlias(
+                new route53Targets.CloudFrontTarget(distribution),
+            ),
         });
 
-        new route53.AaaaRecord(this, 'WwwDomainAaaaRecord', {
+        new route53.AaaaRecord(this, "WwwDomainAaaaRecord", {
             zone: hostedZone,
             recordName: wwwRecordName,
-            target: route53.RecordTarget.fromAlias(new route53Targets.CloudFrontTarget(distribution)),
+            target: route53.RecordTarget.fromAlias(
+                new route53Targets.CloudFrontTarget(distribution),
+            ),
         });
 
         const stackSourceDir = path.dirname(fileURLToPath(import.meta.url));
-        const uiDistPath = path.resolve(stackSourceDir, '../../ui/dist');
+        const uiDistPath = path.resolve(stackSourceDir, "../../ui/dist");
 
-        new s3deploy.BucketDeployment(this, 'DeployWebsite', {
+        new s3deploy.BucketDeployment(this, "DeployWebsite", {
             destinationBucket: siteBucket,
             sources: [s3deploy.Source.asset(uiDistPath)],
             distribution,
-            distributionPaths: ['/*'],
+            distributionPaths: ["/*"],
             prune: true,
             retainOnDelete: false,
         });
 
-        new cdk.CfnOutput(this, 'SiteDomainOutput', {
+        new cdk.CfnOutput(this, "SiteDomainOutput", {
             value: `https://${props.siteDomain}`,
-            description: 'Static app URL',
+            description: "Static app URL",
         });
 
-        new cdk.CfnOutput(this, 'WwwSiteDomainOutput', {
+        new cdk.CfnOutput(this, "WwwSiteDomainOutput", {
             value: `https://${wwwSiteDomain}`,
-            description: 'Static app www URL',
+            description: "Static app www URL",
         });
 
-        new cdk.CfnOutput(this, 'DistributionIdOutput', {
+        new cdk.CfnOutput(this, "DistributionIdOutput", {
             value: distribution.distributionId,
-            description: 'CloudFront distribution ID',
+            description: "CloudFront distribution ID",
         });
     }
 }

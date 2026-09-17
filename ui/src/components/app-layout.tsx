@@ -51,7 +51,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                         }
                         to="/users"
                     >
-                        Users
+                        Travelers
                     </NavLink>
                 </nav>
             </aside>
@@ -95,7 +95,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                         }
                         to="/users"
                     >
-                        Users
+                        Travelers
                     </NavLink>
                 </nav>
 
