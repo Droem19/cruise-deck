@@ -20,6 +20,6 @@ export type {
     UpdateTravelerRequest,
     UploadedOffer,
     UploadOffersResponse,
-} from "./contracts/types";
-export type { AuthApp } from "./lambdas/auth";
-export type { TravelersApp } from "./lambdas/travelers";
+} from './contracts/types';
+export type { AuthApp } from './lambdas/auth';
+export type { TravelersApp } from './lambdas/travelers';

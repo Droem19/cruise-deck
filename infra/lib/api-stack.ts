@@ -1,4 +1,4 @@
-import * as cdk from "aws-cdk-lib";
+import * as cdk from 'aws-cdk-lib';
 import {
     aws_apigatewayv2 as apigatewayv2,
     aws_cognito as cognito,
@@ -6,12 +6,12 @@ import {
     aws_lambda as lambda,
     aws_lambda_nodejs as lambdaNodejs,
     aws_s3 as s3,
-} from "aws-cdk-lib";
-import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
-import type { Construct } from "constructs";
+} from 'aws-cdk-lib';
+import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
+import type { Construct } from 'constructs';
 
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 type APIStackProps = cdk.StackProps & {
     siteDomain: string;
@@ -23,8 +23,8 @@ export class APIStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: APIStackProps) {
         super(scope, id, props);
 
-        const userPool = new cognito.UserPool(this, "UserPool", {
-            userPoolName: "cruise-deck-user-pool",
+        const userPool = new cognito.UserPool(this, 'UserPool', {
+            userPoolName: 'cruise-deck-user-pool',
             signInAliases: {
                 email: true,
                 username: false,
@@ -61,21 +61,20 @@ export class APIStack extends cdk.Stack {
             mfaSecondFactor: { sms: false, otp: true },
             email: cognito.UserPoolEmail.withCognito(),
             userVerification: {
-                emailSubject: "Verify your Cruise Deck account",
+                emailSubject: 'Verify your Cruise Deck account',
                 emailBody: [
-                    "Your Cruise Deck verification code is {####}",
-                    "Enter this code in the app to verify your account.",
-                ].join("\n\n"),
+                    'Your Cruise Deck verification code is {####}',
+                    'Enter this code in the app to verify your account.',
+                ].join('\n\n'),
                 emailStyle: cognito.VerificationEmailStyle.CODE,
             },
             removalPolicy: cdk.RemovalPolicy.RETAIN,
             deletionProtection: true,
-            standardThreatProtectionMode:
-                cognito.StandardThreatProtectionMode.NO_ENFORCEMENT,
+            standardThreatProtectionMode: cognito.StandardThreatProtectionMode.NO_ENFORCEMENT,
         });
 
-        const userPoolClient = userPool.addClient("WebAppClient", {
-            userPoolClientName: "cruise-deck-web-app",
+        const userPoolClient = userPool.addClient('WebAppClient', {
+            userPoolClientName: 'cruise-deck-web-app',
             generateSecret: false,
             authFlows: {
                 userPassword: true,
@@ -86,22 +85,20 @@ export class APIStack extends cdk.Stack {
             refreshTokenValidity: cdk.Duration.days(30),
             enableTokenRevocation: true,
             preventUserExistenceErrors: true,
-            readAttributes:
-                new cognito.ClientAttributes().withStandardAttributes({
-                    email: true,
-                    emailVerified: true,
-                    givenName: true,
-                    familyName: true,
-                }),
-            writeAttributes:
-                new cognito.ClientAttributes().withStandardAttributes({
-                    email: true,
-                    givenName: true,
-                    familyName: true,
-                }),
+            readAttributes: new cognito.ClientAttributes().withStandardAttributes({
+                email: true,
+                emailVerified: true,
+                givenName: true,
+                familyName: true,
+            }),
+            writeAttributes: new cognito.ClientAttributes().withStandardAttributes({
+                email: true,
+                givenName: true,
+                familyName: true,
+            }),
         });
 
-        const offersBucket = new s3.Bucket(this, "OfferFilesBucket", {
+        const offersBucket = new s3.Bucket(this, 'OfferFilesBucket', {
             bucketName: `cruise-deck-offers-${this.account}-${this.region}`,
             blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
             encryption: s3.BucketEncryption.S3_MANAGED,
@@ -109,40 +106,31 @@ export class APIStack extends cdk.Stack {
             removalPolicy: cdk.RemovalPolicy.RETAIN,
         });
 
-        const dataTable = new dynamodb.Table(this, "CruiseDeckDataTable", {
+        const dataTable = new dynamodb.Table(this, 'CruiseDeckDataTable', {
             tableName: `cruise-deck-data-${this.account}-${this.region}`,
-            partitionKey: { name: "PK", type: dynamodb.AttributeType.STRING },
-            sortKey: { name: "SK", type: dynamodb.AttributeType.STRING },
+            partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
+            sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
             billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
             pointInTimeRecovery: true,
             removalPolicy: cdk.RemovalPolicy.RETAIN,
         });
 
         const stackSourceDir = path.dirname(fileURLToPath(import.meta.url));
-        const authLambdaEntry = path.resolve(
-            stackSourceDir,
-            "../../api/src/lambdas/auth.ts",
-        );
-        const offersLambdaEntry = path.resolve(
-            stackSourceDir,
-            "../../api/src/lambdas/offers.ts",
-        );
-        const travelersLambdaEntry = path.resolve(
-            stackSourceDir,
-            "../../api/src/lambdas/travelers.ts",
-        );
+        const authLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/auth.ts');
+        const offersLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/offers.ts');
+        const travelersLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/travelers.ts');
 
         const allowedOrigins = [
             `https://${props.siteDomain}`,
             `https://www.${props.siteDomain}`,
-            "http://localhost:5173",
-            "http://localhost:5174",
-        ].join(",");
+            'http://localhost:5173',
+            'http://localhost:5174',
+        ].join(',');
 
-        const authLambda = new lambdaNodejs.NodejsFunction(this, "AuthLambda", {
-            functionName: "cruise-deck-auth",
+        const authLambda = new lambdaNodejs.NodejsFunction(this, 'AuthLambda', {
+            functionName: 'cruise-deck-auth',
             entry: authLambdaEntry,
-            handler: "handler",
+            handler: 'handler',
             runtime: lambda.Runtime.NODEJS_22_X,
             architecture: lambda.Architecture.ARM_64,
             memorySize: 512,
@@ -155,55 +143,47 @@ export class APIStack extends cdk.Stack {
             },
         });
 
-        const offersLambda = new lambdaNodejs.NodejsFunction(
-            this,
-            "OffersLambda",
-            {
-                functionName: "cruise-deck-offers",
-                entry: offersLambdaEntry,
-                handler: "handler",
-                runtime: lambda.Runtime.NODEJS_22_X,
-                architecture: lambda.Architecture.ARM_64,
-                memorySize: 512,
-                timeout: cdk.Duration.seconds(30),
-                environment: {
-                    ALLOWED_ORIGINS: allowedOrigins,
-                    USER_POOL_ID: userPool.userPoolId,
-                    USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
-                    USER_POOL_REGION: this.region,
-                    OFFERS_BUCKET_NAME: offersBucket.bucketName,
-                },
+        const offersLambda = new lambdaNodejs.NodejsFunction(this, 'OffersLambda', {
+            functionName: 'cruise-deck-offers',
+            entry: offersLambdaEntry,
+            handler: 'handler',
+            runtime: lambda.Runtime.NODEJS_22_X,
+            architecture: lambda.Architecture.ARM_64,
+            memorySize: 512,
+            timeout: cdk.Duration.seconds(30),
+            environment: {
+                ALLOWED_ORIGINS: allowedOrigins,
+                USER_POOL_ID: userPool.userPoolId,
+                USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
+                USER_POOL_REGION: this.region,
+                OFFERS_BUCKET_NAME: offersBucket.bucketName,
             },
-        );
+        });
 
-        const travelersLambda = new lambdaNodejs.NodejsFunction(
-            this,
-            "TravelersLambda",
-            {
-                functionName: "cruise-deck-travelers",
-                entry: travelersLambdaEntry,
-                handler: "handler",
-                runtime: lambda.Runtime.NODEJS_22_X,
-                architecture: lambda.Architecture.ARM_64,
-                memorySize: 512,
-                timeout: cdk.Duration.seconds(10),
-                environment: {
-                    ALLOWED_ORIGINS: allowedOrigins,
-                    USER_POOL_ID: userPool.userPoolId,
-                    USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
-                    USER_POOL_REGION: this.region,
-                    CRUISE_DECK_DATA_TABLE_NAME: dataTable.tableName,
-                },
+        const travelersLambda = new lambdaNodejs.NodejsFunction(this, 'TravelersLambda', {
+            functionName: 'cruise-deck-travelers',
+            entry: travelersLambdaEntry,
+            handler: 'handler',
+            runtime: lambda.Runtime.NODEJS_22_X,
+            architecture: lambda.Architecture.ARM_64,
+            memorySize: 512,
+            timeout: cdk.Duration.seconds(10),
+            environment: {
+                ALLOWED_ORIGINS: allowedOrigins,
+                USER_POOL_ID: userPool.userPoolId,
+                USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
+                USER_POOL_REGION: this.region,
+                CRUISE_DECK_DATA_TABLE_NAME: dataTable.tableName,
             },
-        );
+        });
 
         offersBucket.grantReadWrite(offersLambda);
         dataTable.grantReadWriteData(travelersLambda);
 
-        this.api = new apigatewayv2.HttpApi(this, "AuthApi", {
-            apiName: "cruise-deck-api",
+        this.api = new apigatewayv2.HttpApi(this, 'AuthApi', {
+            apiName: 'cruise-deck-api',
             corsPreflight: {
-                allowHeaders: ["Authorization", "Content-Type"],
+                allowHeaders: ['Authorization', 'Content-Type'],
                 allowMethods: [
                     apigatewayv2.CorsHttpMethod.DELETE,
                     apigatewayv2.CorsHttpMethod.GET,
@@ -214,94 +194,76 @@ export class APIStack extends cdk.Stack {
                 allowOrigins: [
                     `https://${props.siteDomain}`,
                     `https://www.${props.siteDomain}`,
-                    "http://localhost:5173",
+                    'http://localhost:5173',
                 ],
                 allowCredentials: true,
                 maxAge: cdk.Duration.days(1),
             },
         });
 
-        const lambdaIntegration = new HttpLambdaIntegration(
-            "AuthLambdaIntegration",
-            authLambda,
-        );
-        const offersLambdaIntegration = new HttpLambdaIntegration(
-            "OffersLambdaIntegration",
-            offersLambda,
-        );
-        const travelersLambdaIntegration = new HttpLambdaIntegration(
-            "TravelersLambdaIntegration",
-            travelersLambda,
-        );
+        const lambdaIntegration = new HttpLambdaIntegration('AuthLambdaIntegration', authLambda);
+        const offersLambdaIntegration = new HttpLambdaIntegration('OffersLambdaIntegration', offersLambda);
+        const travelersLambdaIntegration = new HttpLambdaIntegration('TravelersLambdaIntegration', travelersLambda);
 
         this.api.addRoutes({
-            path: "/{proxy+}",
+            path: '/{proxy+}',
             methods: [apigatewayv2.HttpMethod.ANY],
             integration: lambdaIntegration,
         });
 
-        new cdk.CfnOutput(this, "AuthApiUrlOutput", {
+        new cdk.CfnOutput(this, 'AuthApiUrlOutput', {
             value: this.api.apiEndpoint,
-            description: "Auth API URL",
+            description: 'Auth API URL',
         });
 
         this.api.addRoutes({
-            path: "/offers",
-            methods: [
-                apigatewayv2.HttpMethod.GET,
-                apigatewayv2.HttpMethod.POST,
-            ],
+            path: '/offers',
+            methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
             integration: offersLambdaIntegration,
         });
 
         this.api.addRoutes({
-            path: "/offers/{offerId}",
+            path: '/offers/{offerId}',
             methods: [apigatewayv2.HttpMethod.DELETE],
             integration: offersLambdaIntegration,
         });
 
         this.api.addRoutes({
-            path: "/offers/{offerId}/download",
+            path: '/offers/{offerId}/download',
             methods: [apigatewayv2.HttpMethod.GET],
             integration: offersLambdaIntegration,
         });
 
         this.api.addRoutes({
-            path: "/travelers",
-            methods: [
-                apigatewayv2.HttpMethod.GET,
-                apigatewayv2.HttpMethod.POST,
-            ],
+            path: '/travelers',
+            methods: [apigatewayv2.HttpMethod.GET, apigatewayv2.HttpMethod.POST],
             integration: travelersLambdaIntegration,
         });
 
         this.api.addRoutes({
-            path: "/travelers/{travelerId}",
-            methods: [
-                apigatewayv2.HttpMethod.DELETE,
-                apigatewayv2.HttpMethod.PUT,
-            ],
+            path: '/travelers/{travelerId}',
+            methods: [apigatewayv2.HttpMethod.DELETE, apigatewayv2.HttpMethod.PUT],
             integration: travelersLambdaIntegration,
         });
 
-        new cdk.CfnOutput(this, "UserPoolIdOutput", {
+        new cdk.CfnOutput(this, 'UserPoolIdOutput', {
             value: userPool.userPoolId,
-            description: "Cognito user pool ID",
+            description: 'Cognito user pool ID',
         });
 
-        new cdk.CfnOutput(this, "UserPoolClientIdOutput", {
+        new cdk.CfnOutput(this, 'UserPoolClientIdOutput', {
             value: userPoolClient.userPoolClientId,
-            description: "Cognito web app client ID",
+            description: 'Cognito web app client ID',
         });
 
-        new cdk.CfnOutput(this, "OffersBucketNameOutput", {
+        new cdk.CfnOutput(this, 'OffersBucketNameOutput', {
             value: offersBucket.bucketName,
-            description: "Private uploaded offers bucket name",
+            description: 'Private uploaded offers bucket name',
         });
 
-        new cdk.CfnOutput(this, "CruiseDeckDataTableNameOutput", {
+        new cdk.CfnOutput(this, 'CruiseDeckDataTableNameOutput', {
             value: dataTable.tableName,
-            description: "CruiseDeck application data table name",
+            description: 'CruiseDeck application data table name',
         });
     }
 }
