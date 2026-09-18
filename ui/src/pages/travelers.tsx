@@ -118,6 +118,11 @@ export function TravelersPage() {
     };
 
     const handleDelete = async (travelerId: string) => {
+        if (travelers.length <= 1) {
+            setError('At least one traveler is required.');
+            return;
+        }
+
         if (!window.confirm('Delete this traveler?')) return;
 
         setError(null);
@@ -208,6 +213,7 @@ export function TravelersPage() {
                                         const isEditing = editingTravelerId === traveler.travelerId;
                                         const isUpdating = updatingTravelerId === traveler.travelerId;
                                         const isDeleting = deletingTravelerId === traveler.travelerId;
+                                        const canDeleteTraveler = travelers.length > 1;
 
                                         return (
                                             <tr className="transition hover:bg-blue-50/50" key={traveler.travelerId}>
@@ -273,14 +279,16 @@ export function TravelersPage() {
                                                                 Edit
                                                             </button>
                                                         )}
-                                                        <button
-                                                            className="inline-flex h-9 items-center justify-center rounded-md border border-rose-200 bg-white px-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60"
-                                                            disabled={isDeleting}
-                                                            type="button"
-                                                            onClick={() => void handleDelete(traveler.travelerId)}
-                                                        >
-                                                            {isDeleting ? 'Deleting...' : 'Delete'}
-                                                        </button>
+                                                        {canDeleteTraveler ? (
+                                                            <button
+                                                                className="inline-flex h-9 items-center justify-center rounded-md border border-rose-200 bg-white px-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                disabled={isDeleting}
+                                                                type="button"
+                                                                onClick={() => void handleDelete(traveler.travelerId)}
+                                                            >
+                                                                {isDeleting ? 'Deleting...' : 'Delete'}
+                                                            </button>
+                                                        ) : null}
                                                     </div>
                                                 </td>
                                             </tr>

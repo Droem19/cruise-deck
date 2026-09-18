@@ -239,6 +239,12 @@ export const updateTraveler = async (userSub: string, travelerId: string, reques
 };
 
 export const deleteTraveler = async (userSub: string, travelerId: string) => {
+    const travelerCount = await getTravelerCount(userSub);
+
+    if (travelerCount <= 1) {
+        throw new HTTPException(400, { message: 'At least one traveler is required.' });
+    }
+
     try {
         await getDocumentClient().send(
             new DeleteCommand({
@@ -257,4 +263,20 @@ export const deleteTraveler = async (userSub: string, travelerId: string) => {
 
         throw error;
     }
+};
+
+const getTravelerCount = async (userSub: string) => {
+    const response = await getDocumentClient().send(
+        new QueryCommand({
+            TableName: getTableName(),
+            KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+            ExpressionAttributeValues: {
+                ':pk': userPk(userSub),
+                ':skPrefix': travelerSkPrefix,
+            },
+            Select: 'COUNT',
+        })
+    );
+
+    return response.Count ?? 0;
 };
