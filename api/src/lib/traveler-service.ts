@@ -88,7 +88,7 @@ const getInitialTravelerName = (user: AuthUser) => {
     return { firstName, lastName };
 };
 
-export const ensureInitialTravelerForUser = async (user: AuthUser) => {
+export const createInitialTravelerForUser = async (user: AuthUser) => {
     const tableName = getTableName();
     const ownerPk = userPk(user.sub);
     const now = new Date().toISOString();
@@ -153,8 +153,6 @@ export const createTraveler = async (userSub: string, request: CreateTravelerReq
 };
 
 export const listTravelersForUser = async (user: AuthUser) => {
-    await ensureInitialTravelerForUser(user);
-
     const response = await getDocumentClient().send(
         new QueryCommand({
             TableName: getTableName(),

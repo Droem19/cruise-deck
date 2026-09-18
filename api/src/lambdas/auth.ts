@@ -36,6 +36,7 @@ import {
     setAuthenticationResultCookies,
     updateUserProfileFromCookies,
 } from '../lib/cognito';
+import { createInitialTravelerForUser } from '../lib/traveler-service';
 
 export const app = new Hono();
 
@@ -64,6 +65,18 @@ const routes = app
                     ],
                 })
             );
+
+            if (!response.UserSub) {
+                throw new HTTPException(500, { message: 'Account created without a user ID.' });
+            }
+
+            await createInitialTravelerForUser({
+                sub: response.UserSub,
+                email,
+                emailVerified: response.UserConfirmed ?? false,
+                givenName: firstName,
+                familyName: lastName,
+            });
 
             return context.json<SignUpResponse>({
                 userConfirmed: response.UserConfirmed ?? false,
