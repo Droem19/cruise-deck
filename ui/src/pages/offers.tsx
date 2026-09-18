@@ -149,10 +149,12 @@ function UploadOffersModal({
     }, [travelers]);
 
     const addFiles = (nextFiles: FileList | File[]) => {
+        const selectedFiles = Array.from(nextFiles);
+
         setFiles((currentFiles) => {
             const filesByKey = new Map(currentFiles.map((file) => [getFileKey(file), file]));
 
-            for (const file of Array.from(nextFiles)) {
+            for (const file of selectedFiles) {
                 filesByKey.set(getFileKey(file), file);
             }
 
@@ -212,13 +214,20 @@ function UploadOffersModal({
                             setError(null);
                         }}
                     >
-                        {travelers.length !== 1 ? <option value="">Select traveler</option> : null}
+                        {travelers.length !== 1 ? (
+                            <option value="" disabled>
+                                Select traveler
+                            </option>
+                        ) : null}
                         {travelers.map((traveler) => (
                             <option value={traveler.travelerId} key={traveler.travelerId}>
                                 {formatTravelerName(traveler)}
                             </option>
                         ))}
                     </select>
+                    {!selectedTravelerId ? (
+                        <p className="mt-2 text-sm font-medium text-amber-700">Select a traveler to enable uploads.</p>
+                    ) : null}
                 </label>
 
                 <label
