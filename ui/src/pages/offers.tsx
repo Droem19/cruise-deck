@@ -215,7 +215,7 @@ function UploadOffersModal({
                         }}
                     >
                         {travelers.length !== 1 ? (
-                            <option value="" disabled>
+                            <option value="" disabled hidden>
                                 Select traveler
                             </option>
                         ) : null}
@@ -226,7 +226,9 @@ function UploadOffersModal({
                         ))}
                     </select>
                     {!selectedTravelerId ? (
-                        <p className="mt-2 text-sm font-medium text-amber-700">Select a traveler to enable uploads.</p>
+                        <p className="mt-2 text-sm font-medium text-amber-700">
+                            Select a traveler before uploading offers.
+                        </p>
                     ) : null}
                 </label>
 
