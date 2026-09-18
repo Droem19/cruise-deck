@@ -4,6 +4,7 @@ import { HTTPException } from 'hono/http-exception';
 
 import type { MessageResponse } from '../contracts/types';
 
+// Reads environment variables in both Lambda and local Node runtimes.
 export const readEnv = (name: string) => {
     const runtime = globalThis as typeof globalThis & {
         process?: { env?: Record<string, string | undefined> };
@@ -12,6 +13,7 @@ export const readEnv = (name: string) => {
     return runtime.process?.env?.[name];
 };
 
+// Resolves the configured CORS origins for API responses.
 export const getAllowedOrigins = () => {
     const configuredOrigins = readEnv('ALLOWED_ORIGINS') ?? 'http://localhost:5173';
 
@@ -21,6 +23,7 @@ export const getAllowedOrigins = () => {
         .filter(Boolean);
 };
 
+// Applies shared CORS settings for JSON API lambdas.
 export const corsMiddleware = cors({
     origin: getAllowedOrigins(),
     credentials: true,
@@ -28,6 +31,7 @@ export const corsMiddleware = cors({
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 });
 
+// Converts thrown API errors into consistent JSON responses.
 export const errorHandler = (error: Error, context: Context) => {
     if (error instanceof HTTPException) {
         return context.json<MessageResponse>({ message: error.message }, error.status);

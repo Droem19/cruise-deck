@@ -3,15 +3,15 @@ import { handle } from 'hono/aws-lambda';
 import { cors } from 'hono/cors';
 
 import type { ListOffersResponse, MessageResponse, UploadOffersResponse } from '../contracts/types';
-import { errorHandler, getAllowedOrigins } from '../lib/api-helpers';
-import { readUserFromCookies } from '../lib/cognito';
+import { errorHandler, getAllowedOrigins } from '../lib/api-helper';
+import { readUserFromCookies } from '../lib/auth-service';
 import {
-    deleteFileFromS3,
-    getDownloadableFileFromS3,
+    deleteOfferForUser,
+    getDownloadableOfferForUser,
     listOffersForUser,
-    type UploadedOfferFile,
-    uploadFileToS3,
-} from '../lib/s3-helper';
+    uploadOfferForUser,
+} from '../lib/offer-service';
+import type { UploadedOfferFile } from '../lib/s3-helper';
 
 export const app = new Hono();
 
@@ -36,8 +36,13 @@ const routes = app
     .post('/offers', async (context) => {
         const user = await readUserFromCookies(context);
         const formData = await context.req.formData();
+        const travelerId = readTravelerId(formData);
         const entries: unknown[] = [...formData.getAll('files'), ...formData.getAll('file')];
         const files = entries.filter(isUploadedOfferFile);
+
+        if (!travelerId) {
+            return context.json<MessageResponse>({ message: 'Traveler is required.' }, 400);
+        }
 
         if (files.length === 0) {
             return context.json<MessageResponse>({ message: 'At least one offer file is required.' }, 400);
@@ -46,7 +51,7 @@ const routes = app
         const offers = [];
 
         for (const file of files) {
-            offers.push(await uploadFileToS3(user.sub, file));
+            offers.push(await uploadOfferForUser(user.sub, travelerId, file));
         }
 
         return context.json<UploadOffersResponse>({ offers }, 201);
@@ -54,7 +59,7 @@ const routes = app
     .get('/offers/:offerId/download', async (context) => {
         const user = await readUserFromCookies(context);
         const offerId = context.req.param('offerId');
-        const response = await getDownloadableFileFromS3(user.sub, offerId);
+        const response = await getDownloadableOfferForUser(user.sub, offerId);
 
         return context.json(response);
     })
@@ -62,7 +67,7 @@ const routes = app
         const user = await readUserFromCookies(context);
         const offerId = context.req.param('offerId');
 
-        await deleteFileFromS3(user.sub, offerId);
+        await deleteOfferForUser(user.sub, offerId);
 
         return context.json<MessageResponse>({ message: 'Offer deleted.' });
     });
@@ -76,4 +81,10 @@ const isUploadedOfferFile = (value: unknown): value is UploadedOfferFile => {
     if (!value || typeof value !== 'object') return false;
 
     return 'name' in value && 'size' in value && 'arrayBuffer' in value;
+};
+
+const readTravelerId = (formData: FormData) => {
+    const value = formData.get('travelerId');
+
+    return typeof value === 'string' ? value.trim() : undefined;
 };

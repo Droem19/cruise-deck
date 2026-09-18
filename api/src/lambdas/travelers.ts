@@ -3,8 +3,8 @@ import { handle } from 'hono/aws-lambda';
 
 import type { ListTravelersResponse, MessageResponse, TravelerResponse } from '../contracts/types';
 import { createTravelerValidator, updateTravelerValidator } from '../contracts/validators';
-import { corsMiddleware, errorHandler } from '../lib/api-helpers';
-import { readUserFromCookies, readUserProfileFromCookies } from '../lib/cognito';
+import { corsMiddleware, errorHandler } from '../lib/api-helper';
+import { readUserFromCookies, readUserProfileFromCookies } from '../lib/auth-service';
 import { createTraveler, deleteTraveler, listTravelersForUser, updateTraveler } from '../lib/traveler-service';
 
 export const app = new Hono();

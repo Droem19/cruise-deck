@@ -2,6 +2,7 @@ import { type DragEvent, type FormEvent, useEffect, useState } from 'react';
 import { Navigate } from 'react-router';
 
 import { offersApi, type UploadedOffer } from '../api/offers';
+import { type Traveler, travelersApi } from '../api/travelers';
 import { useAuth } from '../auth/auth-context';
 import { AppLayout } from '../components/app-layout';
 import { AppModal } from '../components/app-modal';
@@ -9,6 +10,7 @@ import { AppModal } from '../components/app-modal';
 export function OffersPage() {
     const { user } = useAuth();
     const [offers, setOffers] = useState<UploadedOffer[]>([]);
+    const [travelers, setTravelers] = useState<Traveler[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploadOpen, setIsUploadOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -22,8 +24,12 @@ export function OffersPage() {
             setError(null);
 
             try {
-                const response = await offersApi.list();
-                if (!cancelled) setOffers(response.offers);
+                const [offersResponse, travelersResponse] = await Promise.all([offersApi.list(), travelersApi.list()]);
+
+                if (!cancelled) {
+                    setOffers(offersResponse.offers);
+                    setTravelers(travelersResponse.travelers);
+                }
             } catch (requestError) {
                 if (!cancelled) setError(getRequestErrorMessage(requestError, 'Unable to load offers.'));
             } finally {
@@ -82,6 +88,7 @@ export function OffersPage() {
                     </div>
                     <button
                         className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-[#0B65CA] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#45AEFC] hover:text-zinc-950 focus:outline-none focus:ring-4 focus:ring-[#45AEFC]/25"
+                        disabled={travelers.length === 0}
                         type="button"
                         onClick={() => setIsUploadOpen(true)}
                     >
@@ -100,12 +107,14 @@ export function OffersPage() {
                     deletingOfferId={deletingOfferId}
                     isLoading={isLoading}
                     offers={offers}
+                    travelers={travelers}
                     onDelete={handleDelete}
                     onDownload={handleDownload}
                 />
 
                 {isUploadOpen ? (
                     <UploadOffersModal
+                        travelers={travelers}
                         onClose={() => setIsUploadOpen(false)}
                         onUploaded={async () => {
                             await refreshOffers();
@@ -118,11 +127,26 @@ export function OffersPage() {
     );
 }
 
-function UploadOffersModal({ onClose, onUploaded }: { onClose: () => void; onUploaded: () => Promise<void> }) {
+function UploadOffersModal({
+    travelers,
+    onClose,
+    onUploaded,
+}: {
+    travelers: Traveler[];
+    onClose: () => void;
+    onUploaded: () => Promise<void>;
+}) {
     const [files, setFiles] = useState<File[]>([]);
+    const [selectedTravelerId, setSelectedTravelerId] = useState(() =>
+        travelers.length === 1 ? travelers[0].travelerId : ''
+    );
     const [isDragging, setIsDragging] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (travelers.length === 1) setSelectedTravelerId(travelers[0].travelerId);
+    }, [travelers]);
 
     const addFiles = (nextFiles: FileList | File[]) => {
         setFiles((currentFiles) => {
@@ -153,10 +177,15 @@ function UploadOffersModal({ onClose, onUploaded }: { onClose: () => void; onUpl
             return;
         }
 
+        if (!selectedTravelerId) {
+            setError('Choose a traveler for these offers.');
+            return;
+        }
+
         setIsUploading(true);
 
         try {
-            await offersApi.upload(files);
+            await offersApi.upload(selectedTravelerId, files);
             await onUploaded();
         } catch (requestError) {
             setError(getRequestErrorMessage(requestError, 'Unable to upload offers.'));
@@ -172,6 +201,26 @@ function UploadOffersModal({ onClose, onUploaded }: { onClose: () => void; onUpl
             onClose={onClose}
         >
             <form className="space-y-5" onSubmit={handleSubmit}>
+                <label className="block">
+                    <span className="text-sm font-semibold text-zinc-700">Traveler</span>
+                    <select
+                        className="mt-1 block h-11 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-[#0B65CA] focus:ring-4 focus:ring-[#45AEFC]/25 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-500"
+                        disabled={travelers.length === 1 || isUploading}
+                        value={selectedTravelerId}
+                        onChange={(event) => {
+                            setSelectedTravelerId(event.target.value);
+                            setError(null);
+                        }}
+                    >
+                        {travelers.length !== 1 ? <option value="">Select traveler</option> : null}
+                        {travelers.map((traveler) => (
+                            <option value={traveler.travelerId} key={traveler.travelerId}>
+                                {formatTravelerName(traveler)}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
                 <label
                     className={[
                         'block cursor-pointer rounded-lg border border-dashed p-6 text-center transition',
@@ -252,7 +301,7 @@ function UploadOffersModal({ onClose, onUploaded }: { onClose: () => void; onUpl
                     </button>
                     <button
                         className="inline-flex h-10 items-center justify-center rounded-md bg-[#0B65CA] px-4 text-sm font-semibold text-white transition hover:bg-[#45AEFC] hover:text-zinc-950 focus:outline-none focus:ring-4 focus:ring-[#45AEFC]/25 disabled:cursor-not-allowed disabled:opacity-70"
-                        disabled={files.length === 0 || isUploading}
+                        disabled={files.length === 0 || !selectedTravelerId || isUploading}
                         type="submit"
                     >
                         {isUploading ? 'Uploading...' : 'Upload Offers'}
@@ -271,15 +320,19 @@ function OffersTable({
     deletingOfferId,
     isLoading,
     offers,
+    travelers,
     onDelete,
     onDownload,
 }: {
     deletingOfferId: string | null;
     isLoading: boolean;
     offers: UploadedOffer[];
+    travelers: Traveler[];
     onDelete: (offerId: string) => void;
     onDownload: (offerId: string) => void;
 }) {
+    const travelerById = new Map(travelers.map((traveler) => [traveler.travelerId, traveler]));
+
     return (
         <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-200 px-5 py-4">
@@ -295,10 +348,11 @@ function OffersTable({
 
             {offers.length > 0 ? (
                 <div className="overflow-x-auto">
-                    <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+                    <table className="w-full min-w-[840px] border-collapse text-left text-sm">
                         <thead className="bg-zinc-50 text-xs uppercase text-zinc-500">
                             <tr>
                                 <th className="px-5 py-3 font-semibold">File Name</th>
+                                <th className="px-5 py-3 font-semibold">Traveler</th>
                                 <th className="px-5 py-3 font-semibold">Uploaded</th>
                                 <th className="px-5 py-3 font-semibold">Size</th>
                                 <th className="px-5 py-3 text-right font-semibold">Actions</th>
@@ -310,6 +364,9 @@ function OffersTable({
                                     <td className="max-w-md px-5 py-4">
                                         <p className="truncate font-medium text-zinc-950">{offer.fileName}</p>
                                         <p className="mt-1 text-xs text-zinc-500">{offer.offerId}</p>
+                                    </td>
+                                    <td className="whitespace-nowrap px-5 py-4 text-zinc-700">
+                                        {formatOfferTravelerName(offer, travelerById)}
                                     </td>
                                     <td className="whitespace-nowrap px-5 py-4 text-zinc-700">
                                         {formatDateTime(offer.uploadedAt)}
@@ -344,6 +401,16 @@ function OffersTable({
             ) : null}
         </section>
     );
+}
+
+function formatTravelerName(traveler: Traveler) {
+    return [traveler.firstName, traveler.lastName].filter(Boolean).join(' ');
+}
+
+function formatOfferTravelerName(offer: UploadedOffer, travelerById: Map<string, Traveler>) {
+    const traveler = travelerById.get(offer.travelerId);
+
+    return traveler ? formatTravelerName(traveler) : 'Unknown traveler';
 }
 
 function UploadIcon() {

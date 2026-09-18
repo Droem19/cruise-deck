@@ -46,6 +46,7 @@ export type UpdateTravelerRequest = {
 
 export type UploadedOffer = {
     offerId: string;
+    travelerId: string;
     fileName: string;
     sizeBytes: number;
     uploadedAt: string;

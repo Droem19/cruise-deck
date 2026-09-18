@@ -20,9 +20,14 @@ Cruise Deck is a React app with Cognito-backed login, a typed Hono API, and AWS 
 - `api` - Hono serverless API
 - `api/src/lambdas` - Lambda entry points and route wiring
 - `api/src/contracts` - API request/response types and validators
-- `api/src/lib` - Reusable API helpers and Cognito utilities
+- `api/src/lib` - API services and lower-level helpers
 - `infra` - CDK app and stacks for hosting the UI, Cognito, HTTP API, and Lambda
 - `.github/workflows/deploy.yml` - Production deploy workflow for pushes to `main` and manual dispatches
+
+API lib naming convention:
+
+- `*-service.ts` files own app/domain workflows, such as auth, travelers, and offers.
+- `*-helper.ts` files own lower-level shared infrastructure or framework utilities, such as API middleware, DynamoDB setup, and S3 file operations.
 
 ## Getting Started (Local Development)
 
@@ -69,7 +74,7 @@ For local development, point the API at a real Cognito user pool before running 
 Copy-Item api/.env.example api/.env
 ```
 
-Then fill in `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, and `USER_POOL_REGION` in `api/.env`. You can get those values from the CDK outputs after deploying the API stack.
+Then fill in `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `USER_POOL_REGION`, `CRUISE_DECK_DATA_TABLE_NAME`, and `OFFERS_BUCKET_NAME` in `api/.env`. You can get those values from the CDK outputs after deploying the API stack.
 
 Do not reuse an `api/.env` from another project. Deploy this project first, then create `api/.env` from `api/.env.example` and fill it with this project's own CDK outputs.
 
@@ -116,6 +121,25 @@ The `/app` UI route is protected by the auth provider. If `/me` cannot resolve a
 
 Cruise Deck uses self-signup with first and last name fields, a user-chosen password, and email verification. Names are stored in Cognito standard `given_name` and `family_name` attributes. It does not use Cognito admin invitations, temporary passwords, or `NEW_PASSWORD_REQUIRED` challenge handling.
 
+When a user signs up, the auth API also creates the user's base traveler in DynamoDB from the signup first and last name. Traveler records can be added, edited, and deleted, but the app and API prevent deleting the final remaining traveler for an account.
+
+## Travelers and Offers
+
+Cruise Deck keeps account-owned app data in one DynamoDB table using a single-table style key pattern:
+
+- `PK = USER#<userSub>` groups one user's account data.
+- `SK = ACCOUNT#METADATA` stores account setup metadata, including the default traveler ID.
+- `SK = TRAVELER#<travelerId>` stores traveler records.
+- `SK = OFFER#<offerId>` stores uploaded offer metadata.
+
+Uploaded offer files are stored in the private offers S3 bucket. DynamoDB stores the offer metadata and traveler relationship:
+
+- `travelerId` links the offer to the selected traveler.
+- `fileName`, `sizeBytes`, and `uploadedAt` describe the upload.
+- `sourceS3Key` points to the private S3 object for download/delete operations.
+
+The Offers page loads travelers and offers together. When uploading offer files, one traveler is preselected if the account has only one traveler; otherwise the user must choose the traveler before upload.
+
 ## Infrastructure
 
 The CDK app lives in `infra` and defines two stacks:
@@ -135,7 +159,7 @@ The UI stack creates:
 
 - Private S3 bucket for static site assets
 - CloudFront distribution with Origin Access Control
-- CloudFront proxy behaviors for `/auth/*`, `/me`, and `/health` so the deployed UI calls the API through the same site origin
+- CloudFront proxy behaviors for `/auth/*`, `/me`, `/health`, `/offers`, and `/travelers` so the deployed UI calls the API through the same site origin
 - CloudFront Function SPA routing for extensionless UI paths like `/verify`, without rewriting API error responses
 - ACM certificate for the primary domain and `www` domain
 - Route53 A and AAAA alias records for both domains
@@ -145,9 +169,13 @@ The API stack creates:
 
 - Cognito user pool with email sign-in, email-only recovery, and standard name attributes
 - Cognito user pool client with read/write access to email and name attributes
+- DynamoDB table for account metadata, travelers, and offer metadata
+- Private S3 bucket for uploaded offer files
 - HTTP API Gateway
 - `cruise-deck-auth` Lambda backed by the Hono API
-- Lambda integration for API Gateway
+- `cruise-deck-offers` Lambda for offer uploads, listing, downloads, and deletes
+- `cruise-deck-travelers` Lambda for traveler management
+- Lambda integrations for API Gateway
 
 ## Deploying the app
 

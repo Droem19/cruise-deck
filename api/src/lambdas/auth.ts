@@ -25,7 +25,7 @@ import {
     signUpValidator,
     updateProfileValidator,
 } from '../contracts/validators';
-import { corsMiddleware, errorHandler } from '../lib/api-helpers';
+import { corsMiddleware, errorHandler } from '../lib/api-helper';
 import {
     clearAuthCookies,
     cookieNames,
@@ -35,7 +35,7 @@ import {
     readUserProfileFromCookies,
     setAuthenticationResultCookies,
     updateUserProfileFromCookies,
-} from '../lib/cognito';
+} from '../lib/auth-service';
 import { createInitialTravelerForUser } from '../lib/traveler-service';
 
 export const app = new Hono();

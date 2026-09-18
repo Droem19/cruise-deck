@@ -15,9 +15,10 @@ import { CognitoJwtVerifier } from 'aws-jwt-verify';
 import { getCookie, setCookie } from 'hono/cookie';
 import { HTTPException } from 'hono/http-exception';
 
-import { readEnv } from './api-helpers';
+import { readEnv } from './api-helper';
 import type { AuthUser, CognitoConfig, UpdateProfileRequest } from '../contracts/types';
 
+// Names the auth cookies shared by login, refresh, logout, and user lookup.
 export const cookieNames = {
     accessToken: 'access_token',
     idToken: 'id_token',
@@ -39,6 +40,7 @@ const getCookieSecure = () => {
 
 const getCookieSameSite = () => (getCookieSecure() ? 'None' : 'Lax');
 
+// Reads the Cognito user pool settings required for auth operations.
 export const getCognitoConfig = (): CognitoConfig => {
     const userPoolId = readEnv('USER_POOL_ID');
     const clientId = readEnv('USER_POOL_CLIENT_ID');
@@ -51,6 +53,7 @@ export const getCognitoConfig = (): CognitoConfig => {
     return { userPoolId, clientId, region };
 };
 
+// Reuses a region-scoped Cognito client across warm Lambda invocations.
 export const getCognitoClient = (region: string) => {
     if (!cognitoClient || cognitoClientRegion !== region) {
         cognitoClient = new CognitoIdentityProviderClient({ region });
@@ -122,6 +125,7 @@ const userFromCognitoAttributes = (fallbackSub: string, attributes: AttributeTyp
     };
 };
 
+// Clears every auth cookie from the current response.
 export const clearAuthCookies = (context: Parameters<typeof setCookie>[0]) => {
     for (const name of Object.values(cookieNames)) {
         setAuthCookie(context, name, '', 0);
@@ -151,6 +155,7 @@ const userFromTokens = async (accessToken: string, idToken: string): Promise<Aut
     };
 };
 
+// Stores Cognito auth tokens in cookies and returns the authenticated user.
 export const setAuthenticationResultCookies = (
     context: Parameters<typeof setCookie>[0],
     authenticationResult: AuthenticationResultType
@@ -171,6 +176,7 @@ export const setAuthenticationResultCookies = (
     return userFromTokens(AccessToken, IdToken);
 };
 
+// Reads and verifies auth cookies without calling Cognito's profile endpoint.
 export const readUserFromCookies = async (context: Parameters<typeof getCookie>[0]) => {
     const accessToken = getCookie(context, cookieNames.accessToken);
     const idToken = getCookie(context, cookieNames.idToken);
@@ -188,6 +194,7 @@ export const readUserFromCookies = async (context: Parameters<typeof getCookie>[
     }
 };
 
+// Reads the current user's latest Cognito profile from the access token.
 export const readUserProfileFromCookies = async (context: Parameters<typeof getCookie>[0]) => {
     const accessToken = getCookie(context, cookieNames.accessToken);
 
@@ -208,6 +215,7 @@ export const readUserProfileFromCookies = async (context: Parameters<typeof getC
     }
 };
 
+// Updates the current user's editable profile fields in Cognito.
 export const updateUserProfileFromCookies = async (
     context: Parameters<typeof getCookie>[0],
     request: UpdateProfileRequest
@@ -242,6 +250,7 @@ export const updateUserProfileFromCookies = async (
     }
 };
 
+// Maps Cognito SDK errors to user-safe HTTP errors when possible.
 export const friendlyCognitoError = (error: unknown) => {
     if (error instanceof InvalidPasswordException) {
         return new HTTPException(400, { message: error.message || 'Password does not meet the required policy.' });

@@ -1,7 +1,6 @@
-import { ConditionalCheckFailedException, DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
 import {
     DeleteCommand,
-    DynamoDBDocumentClient,
     GetCommand,
     PutCommand,
     QueryCommand,
@@ -10,7 +9,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { HTTPException } from 'hono/http-exception';
 
-import { readEnv } from './api-helpers';
+import { getDocumentClient, getTableName, userPk } from './dynamo-db-helper';
 import type { AuthUser, CreateTravelerRequest, Traveler, UpdateTravelerRequest } from '../contracts/types';
 
 type TravelerItem = Traveler & {
@@ -21,28 +20,6 @@ type TravelerItem = Traveler & {
 
 const travelerSkPrefix = 'TRAVELER#';
 const accountMetadataSk = 'ACCOUNT#METADATA';
-
-let documentClient: DynamoDBDocumentClient | null = null;
-
-const getDocumentClient = () => {
-    documentClient ??= DynamoDBDocumentClient.from(new DynamoDBClient({}));
-
-    return documentClient;
-};
-
-const getTableName = () => {
-    const tableName = readEnv('CRUISE_DECK_DATA_TABLE_NAME');
-
-    if (!tableName) {
-        throw new HTTPException(500, {
-            message: 'CruiseDeck data table is not configured.',
-        });
-    }
-
-    return tableName;
-};
-
-const userPk = (userSub: string) => `USER#${userSub}`;
 const travelerSk = (travelerId: string) => `${travelerSkPrefix}${travelerId}`;
 
 const isTravelerItem = (item: Record<string, unknown> | undefined): item is TravelerItem => {
@@ -88,6 +65,7 @@ const getInitialTravelerName = (user: AuthUser) => {
     return { firstName, lastName };
 };
 
+// Creates the account metadata row and base traveler during signup.
 export const createInitialTravelerForUser = async (user: AuthUser) => {
     const tableName = getTableName();
     const ownerPk = userPk(user.sub);
@@ -133,6 +111,7 @@ export const createInitialTravelerForUser = async (user: AuthUser) => {
     }
 };
 
+// Adds a traveler to an existing user account.
 export const createTraveler = async (userSub: string, request: CreateTravelerRequest) => {
     const traveler: Traveler = {
         travelerId: crypto.randomUUID(),
@@ -152,6 +131,7 @@ export const createTraveler = async (userSub: string, request: CreateTravelerReq
     return traveler;
 };
 
+// Lists all travelers owned by the current user.
 export const listTravelersForUser = async (user: AuthUser) => {
     const response = await getDocumentClient().send(
         new QueryCommand({
@@ -170,6 +150,7 @@ export const listTravelersForUser = async (user: AuthUser) => {
         .sort((first, second) => first.createdAt.localeCompare(second.createdAt));
 };
 
+// Loads one traveler owned by the current user.
 export const getTraveler = async (userSub: string, travelerId: string) => {
     const response = await getDocumentClient().send(
         new GetCommand({
@@ -187,6 +168,7 @@ export const getTraveler = async (userSub: string, travelerId: string) => {
     return traveler;
 };
 
+// Updates editable fields on one traveler owned by the current user.
 export const updateTraveler = async (userSub: string, travelerId: string, request: UpdateTravelerRequest) => {
     const expressionAttributeNames: Record<string, string> = {
         '#entityType': 'entityType',
@@ -238,6 +220,7 @@ export const updateTraveler = async (userSub: string, travelerId: string, reques
     }
 };
 
+// Deletes one traveler while preserving the required final traveler.
 export const deleteTraveler = async (userSub: string, travelerId: string) => {
     const travelerCount = await getTravelerCount(userSub);
 
@@ -265,6 +248,7 @@ export const deleteTraveler = async (userSub: string, travelerId: string) => {
     }
 };
 
+// Counts traveler records to enforce account-level traveler invariants.
 const getTravelerCount = async (userSub: string) => {
     const response = await getDocumentClient().send(
         new QueryCommand({

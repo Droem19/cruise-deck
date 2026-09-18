@@ -158,6 +158,7 @@ export class APIStack extends cdk.Stack {
                 USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
                 USER_POOL_REGION: this.region,
                 OFFERS_BUCKET_NAME: offersBucket.bucketName,
+                CRUISE_DECK_DATA_TABLE_NAME: dataTable.tableName,
             },
         });
 
@@ -180,6 +181,7 @@ export class APIStack extends cdk.Stack {
 
         offersBucket.grantReadWrite(offersLambda);
         dataTable.grantReadWriteData(authLambda);
+        dataTable.grantReadWriteData(offersLambda);
         dataTable.grantReadWriteData(travelersLambda);
 
         this.api = new apigatewayv2.HttpApi(this, 'AuthApi', {

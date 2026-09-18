@@ -2,6 +2,7 @@ import { apiUrl, authFetch, parseResponse } from './client';
 
 export type UploadedOffer = {
     offerId: string;
+    travelerId: string;
     fileName: string;
     sizeBytes: number;
     uploadedAt: string;
@@ -32,8 +33,10 @@ export const offersApi = {
 
         return parseResponse<ListOffersResponse>(response);
     },
-    upload: async (files: File[]) => {
+    upload: async (travelerId: string, files: File[]) => {
         const formData = new FormData();
+
+        formData.append('travelerId', travelerId);
 
         for (const file of files) {
             formData.append('files', file);
