@@ -152,14 +152,13 @@ function DeleteOfferModal({
     return (
         <AppModal
             title="Delete Offer"
-            description="This will remove the uploaded file and its offer record."
+            description="This will remove the uploaded file and its offer records."
             showCloseButton={!isDeleting}
             onClose={isDeleting ? () => {} : onCancel}
         >
             <div className="space-y-5">
                 <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
                     <p className="text-sm font-semibold text-rose-900">{offer.fileName}</p>
-                    <p className="mt-1 text-xs text-rose-700">{offer.offerId}</p>
                 </div>
 
                 <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 pt-5 sm:flex-row sm:justify-end">
@@ -432,7 +431,6 @@ function OffersTable({
                                 <tr className="transition hover:bg-blue-50/50" key={offer.offerId}>
                                     <td className="max-w-md px-5 py-4">
                                         <p className="truncate font-medium text-zinc-950">{offer.fileName}</p>
-                                        <p className="mt-1 text-xs text-zinc-500">{offer.offerId}</p>
                                     </td>
                                     <td className="whitespace-nowrap px-5 py-4 text-zinc-700">
                                         {formatOfferTravelerName(offer, travelerById)}
