@@ -15,6 +15,7 @@ export function OffersPage() {
     const [isUploadOpen, setIsUploadOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [deletingOfferId, setDeletingOfferId] = useState<string | null>(null);
+    const [offerPendingDelete, setOfferPendingDelete] = useState<UploadedOffer | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -62,8 +63,8 @@ export function OffersPage() {
         }
     };
 
-    const handleDelete = async (offerId: string) => {
-        if (!window.confirm('Delete this offer file?')) return;
+    const handleDelete = async (offer: UploadedOffer) => {
+        const offerId = offer.offerId;
 
         setError(null);
         setDeletingOfferId(offerId);
@@ -71,6 +72,7 @@ export function OffersPage() {
         try {
             await offersApi.delete(offerId);
             setOffers((currentOffers) => currentOffers.filter((offer) => offer.offerId !== offerId));
+            setOfferPendingDelete(null);
         } catch (requestError) {
             setError(getRequestErrorMessage(requestError, 'Unable to delete offer.'));
         } finally {
@@ -108,7 +110,7 @@ export function OffersPage() {
                     isLoading={isLoading}
                     offers={offers}
                     travelers={travelers}
-                    onDelete={handleDelete}
+                    onDelete={setOfferPendingDelete}
                     onDownload={handleDownload}
                 />
 
@@ -122,8 +124,64 @@ export function OffersPage() {
                         }}
                     />
                 ) : null}
+
+                {offerPendingDelete ? (
+                    <DeleteOfferModal
+                        isDeleting={deletingOfferId === offerPendingDelete.offerId}
+                        offer={offerPendingDelete}
+                        onCancel={() => setOfferPendingDelete(null)}
+                        onConfirm={() => void handleDelete(offerPendingDelete)}
+                    />
+                ) : null}
             </section>
         </AppLayout>
+    );
+}
+
+function DeleteOfferModal({
+    offer,
+    isDeleting,
+    onCancel,
+    onConfirm,
+}: {
+    offer: UploadedOffer;
+    isDeleting: boolean;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    return (
+        <AppModal
+            title="Delete Offer"
+            description="This will remove the uploaded file and its offer record."
+            showCloseButton={!isDeleting}
+            onClose={isDeleting ? () => {} : onCancel}
+        >
+            <div className="space-y-5">
+                <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+                    <p className="text-sm font-semibold text-rose-900">{offer.fileName}</p>
+                    <p className="mt-1 text-xs text-rose-700">{offer.offerId}</p>
+                </div>
+
+                <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 pt-5 sm:flex-row sm:justify-end">
+                    <button
+                        className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 focus:outline-none focus:ring-4 focus:ring-[#45AEFC]/25 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={isDeleting}
+                        type="button"
+                        onClick={onCancel}
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        className="inline-flex h-10 items-center justify-center rounded-md border border-rose-200 bg-red-700 px-4 text-sm font-semibold text-white transition hover:bg-red-800 focus:outline-none focus:ring-4 focus:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={isDeleting}
+                        type="button"
+                        onClick={onConfirm}
+                    >
+                        {isDeleting ? 'Deleting...' : 'Delete Offer'}
+                    </button>
+                </div>
+            </div>
+        </AppModal>
     );
 }
 
@@ -339,7 +397,7 @@ function OffersTable({
     isLoading: boolean;
     offers: UploadedOffer[];
     travelers: Traveler[];
-    onDelete: (offerId: string) => void;
+    onDelete: (offer: UploadedOffer) => void;
     onDownload: (offerId: string) => void;
 }) {
     const travelerById = new Map(travelers.map((traveler) => [traveler.travelerId, traveler]));
@@ -398,7 +456,7 @@ function OffersTable({
                                                 className="inline-flex h-9 items-center justify-center rounded-md border border-rose-200 bg-white px-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-4 focus:ring-red-200 disabled:cursor-not-allowed disabled:opacity-60"
                                                 disabled={deletingOfferId === offer.offerId}
                                                 type="button"
-                                                onClick={() => onDelete(offer.offerId)}
+                                                onClick={() => onDelete(offer)}
                                             >
                                                 {deletingOfferId === offer.offerId ? 'Deleting...' : 'Delete'}
                                             </button>
