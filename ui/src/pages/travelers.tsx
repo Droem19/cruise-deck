@@ -3,7 +3,7 @@ import { Navigate } from 'react-router';
 
 import { type Traveler, travelersApi } from '../api/travelers';
 import { useAuth } from '../auth/auth-context';
-import { AppLayout } from '../components/app-layout';
+import { AppLayout, travelersUpdatedEventName } from '../components/app-layout';
 
 export function TravelersPage() {
     const { user } = useAuth();
@@ -37,9 +37,11 @@ export function TravelersPage() {
         };
 
         void loadTravelers();
+        window.addEventListener(travelersUpdatedEventName, loadTravelers);
 
         return () => {
             cancelled = true;
+            window.removeEventListener(travelersUpdatedEventName, loadTravelers);
         };
     }, []);
 

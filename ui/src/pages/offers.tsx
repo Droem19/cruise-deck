@@ -1,11 +1,12 @@
-import { type DragEvent, type FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router';
 
 import { offersApi, type UploadedOffer } from '../api/offers';
 import { type Traveler, travelersApi } from '../api/travelers';
 import { useAuth } from '../auth/auth-context';
-import { AppLayout } from '../components/app-layout';
+import { AppLayout, offersUpdatedEventName, travelersUpdatedEventName } from '../components/app-layout';
 import { AppModal } from '../components/app-modal';
+import { UploadOffersModal } from '../components/upload-offers-modal';
 
 export function OffersPage() {
     const { user } = useAuth();
@@ -19,6 +20,15 @@ export function OffersPage() {
 
     useEffect(() => {
         let cancelled = false;
+
+        const loadTravelers = async () => {
+            try {
+                const travelersResponse = await travelersApi.list();
+                if (!cancelled) setTravelers(travelersResponse.travelers);
+            } catch (requestError) {
+                if (!cancelled) setError(getRequestErrorMessage(requestError, 'Unable to load travelers.'));
+            }
+        };
 
         const loadOffers = async () => {
             setIsLoading(true);
@@ -39,9 +49,13 @@ export function OffersPage() {
         };
 
         void loadOffers();
+        window.addEventListener(offersUpdatedEventName, loadOffers);
+        window.addEventListener(travelersUpdatedEventName, loadTravelers);
 
         return () => {
             cancelled = true;
+            window.removeEventListener(offersUpdatedEventName, loadOffers);
+            window.removeEventListener(travelersUpdatedEventName, loadTravelers);
         };
     }, []);
 
@@ -182,206 +196,6 @@ function DeleteOfferModal({
             </div>
         </AppModal>
     );
-}
-
-function UploadOffersModal({
-    travelers,
-    onClose,
-    onUploaded,
-}: {
-    travelers: Traveler[];
-    onClose: () => void;
-    onUploaded: () => Promise<void>;
-}) {
-    const [files, setFiles] = useState<File[]>([]);
-    const [selectedTravelerId, setSelectedTravelerId] = useState(() =>
-        travelers.length === 1 ? travelers[0].travelerId : ''
-    );
-    const [isDragging, setIsDragging] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (travelers.length === 1) setSelectedTravelerId(travelers[0].travelerId);
-    }, [travelers]);
-
-    const addFiles = (nextFiles: FileList | File[]) => {
-        const selectedFiles = Array.from(nextFiles);
-
-        setFiles((currentFiles) => {
-            const filesByKey = new Map(currentFiles.map((file) => [getFileKey(file), file]));
-
-            for (const file of selectedFiles) {
-                filesByKey.set(getFileKey(file), file);
-            }
-
-            return [...filesByKey.values()];
-        });
-        setError(null);
-    };
-
-    const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
-        event.preventDefault();
-        setIsDragging(false);
-
-        if (event.dataTransfer.files.length > 0) addFiles(event.dataTransfer.files);
-    };
-
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        setError(null);
-
-        if (files.length === 0) {
-            setError('Choose at least one offer file.');
-            return;
-        }
-
-        if (!selectedTravelerId) {
-            setError('Choose a traveler for these offers.');
-            return;
-        }
-
-        setIsUploading(true);
-
-        try {
-            await offersApi.upload(selectedTravelerId, files);
-            await onUploaded();
-        } catch (requestError) {
-            setError(getRequestErrorMessage(requestError, 'Unable to upload offers.'));
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
-    return (
-        <AppModal
-            title="Upload Offers"
-            description="Choose one or more offer files to save privately."
-            onClose={onClose}
-        >
-            <form className="space-y-5" onSubmit={handleSubmit}>
-                <label className="block">
-                    <span className="text-sm font-semibold text-zinc-700">Traveler</span>
-                    <select
-                        className="mt-1 block h-11 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-[#0B65CA] focus:ring-4 focus:ring-[#45AEFC]/25 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-500"
-                        disabled={travelers.length === 1 || isUploading}
-                        value={selectedTravelerId}
-                        onChange={(event) => {
-                            setSelectedTravelerId(event.target.value);
-                            setError(null);
-                        }}
-                    >
-                        {travelers.length !== 1 ? (
-                            <option value="" disabled hidden>
-                                Select traveler
-                            </option>
-                        ) : null}
-                        {travelers.map((traveler) => (
-                            <option value={traveler.travelerId} key={traveler.travelerId}>
-                                {formatTravelerName(traveler)}
-                            </option>
-                        ))}
-                    </select>
-                    {!selectedTravelerId ? (
-                        <p className="mt-2 text-sm font-medium text-amber-700">
-                            Select a traveler before uploading offers.
-                        </p>
-                    ) : null}
-                </label>
-
-                <label
-                    className={[
-                        'block cursor-pointer rounded-lg border border-dashed p-6 text-center transition',
-                        isDragging ? 'border-[#0B65CA] bg-blue-50' : 'border-zinc-300 bg-zinc-50',
-                    ].join(' ')}
-                    onDragEnter={(event) => {
-                        event.preventDefault();
-                        setIsDragging(true);
-                    }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={handleDrop}
-                >
-                    <input
-                        className="sr-only"
-                        multiple
-                        type="file"
-                        onChange={(event) => {
-                            if (event.target.files) addFiles(event.target.files);
-                            event.currentTarget.value = '';
-                        }}
-                    />
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#0B65CA] text-white">
-                        <UploadIcon />
-                    </div>
-                    <p className="mt-3 text-sm font-semibold text-zinc-950">Drag and drop offer files here</p>
-                    <p className="mt-1 text-sm text-zinc-500">or browse from your computer</p>
-                    <span className="mt-4 inline-flex h-10 items-center justify-center rounded-md border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100">
-                        Browse Files
-                    </span>
-                </label>
-
-                {files.length > 0 ? (
-                    <div className="rounded-lg border border-zinc-200">
-                        <div className="border-b border-zinc-200 px-4 py-3 text-sm font-semibold text-zinc-950">
-                            {files.length} selected
-                        </div>
-                        <ul className="max-h-44 divide-y divide-zinc-100 overflow-y-auto">
-                            {files.map((file) => (
-                                <li
-                                    className="flex items-center justify-between gap-3 px-4 py-3"
-                                    key={getFileKey(file)}
-                                >
-                                    <div className="min-w-0">
-                                        <p className="truncate text-sm font-medium text-zinc-950">{file.name}</p>
-                                        <p className="text-xs text-zinc-500">{formatFileSize(file.size)}</p>
-                                    </div>
-                                    <button
-                                        className="text-sm font-semibold text-zinc-500 transition hover:text-red-700"
-                                        type="button"
-                                        onClick={() =>
-                                            setFiles((currentFiles) =>
-                                                currentFiles.filter((currentFile) => currentFile !== file)
-                                            )
-                                        }
-                                    >
-                                        Remove
-                                    </button>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                ) : null}
-
-                {error ? (
-                    <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
-                        {error}
-                    </div>
-                ) : null}
-
-                <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 pt-5 sm:flex-row sm:justify-between">
-                    <button
-                        className="inline-flex h-10 items-center justify-center rounded-md border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 focus:outline-none focus:ring-4 focus:ring-[#45AEFC]/25"
-                        type="button"
-                        onClick={onClose}
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        className="inline-flex h-10 items-center justify-center rounded-md bg-[#0B65CA] px-4 text-sm font-semibold text-white transition hover:bg-[#45AEFC] hover:text-zinc-950 focus:outline-none focus:ring-4 focus:ring-[#45AEFC]/25 disabled:cursor-not-allowed disabled:opacity-70"
-                        disabled={files.length === 0 || !selectedTravelerId || isUploading}
-                        type="submit"
-                    >
-                        {isUploading ? 'Uploading...' : 'Upload Offers'}
-                    </button>
-                </div>
-            </form>
-        </AppModal>
-    );
-}
-
-function getFileKey(file: File) {
-    return `${file.name}-${file.size}-${file.lastModified}`;
 }
 
 function OffersTable({

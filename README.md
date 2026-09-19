@@ -76,6 +76,8 @@ Copy-Item api/.env.example api/.env
 
 Then fill in `USER_POOL_ID`, `USER_POOL_CLIENT_ID`, `USER_POOL_REGION`, `CRUISE_DECK_DATA_TABLE_NAME`, and `OFFERS_BUCKET_NAME` in `api/.env`. You can get those values from the CDK outputs after deploying the API stack.
 
+Local development uses the same AWS-backed Cognito, DynamoDB, and S3 resources as the deployed app.
+
 Do not reuse an `api/.env` from another project. Deploy this project first, then create `api/.env` from `api/.env.example` and fill it with this project's own CDK outputs.
 
 The API sets HTTP-only cookies for Cognito access, ID, and refresh tokens. The UI does not store auth tokens in `localStorage`.

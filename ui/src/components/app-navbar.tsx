@@ -100,7 +100,7 @@ export function AppNavbar({ onProfileSelect }: AppNavbarProps) {
 
                 <div className="relative shrink-0" ref={menuRef}>
                     <button
-                        className="inline-flex h-9 items-center gap-2 rounded-md bg-transparent text-sm font-semibold text-zinc-950 transition hover:text-[#0B65CA] focus:outline-none focus:ring-4 focus:ring-[#45AEFC]/25"
+                        className="inline-flex h-9 items-center gap-2 rounded-md bg-transparent px-2 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-100 focus:bg-zinc-100 focus:outline-none"
                         type="button"
                         aria-expanded={isMenuOpen}
                         aria-haspopup="menu"
