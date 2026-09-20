@@ -2,16 +2,17 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router';
 
 import { offersApi, type UploadedOffer } from '../api/offers';
-import { type Traveler, travelersApi } from '../api/travelers';
+import type { Traveler } from '../api/travelers';
+import { useTravelers } from '../app-data/travelers-context';
 import { useAuth } from '../auth/auth-context';
-import { AppLayout, offersUpdatedEventName, travelersUpdatedEventName } from '../components/app-layout';
+import { AppLayout, offersUpdatedEventName } from '../components/app-layout';
 import { AppModal } from '../components/app-modal';
 import { UploadOffersModal } from '../components/upload-offers-modal';
 
 export function OffersPage() {
     const { user } = useAuth();
+    const { travelers } = useTravelers();
     const [offers, setOffers] = useState<UploadedOffer[]>([]);
-    const [travelers, setTravelers] = useState<Traveler[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploadOpen, setIsUploadOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -21,25 +22,15 @@ export function OffersPage() {
     useEffect(() => {
         let cancelled = false;
 
-        const loadTravelers = async () => {
-            try {
-                const travelersResponse = await travelersApi.list();
-                if (!cancelled) setTravelers(travelersResponse.travelers);
-            } catch (requestError) {
-                if (!cancelled) setError(getRequestErrorMessage(requestError, 'Unable to load travelers.'));
-            }
-        };
-
         const loadOffers = async () => {
             setIsLoading(true);
             setError(null);
 
             try {
-                const [offersResponse, travelersResponse] = await Promise.all([offersApi.list(), travelersApi.list()]);
+                const offersResponse = await offersApi.list();
 
                 if (!cancelled) {
                     setOffers(offersResponse.offers);
-                    setTravelers(travelersResponse.travelers);
                 }
             } catch (requestError) {
                 if (!cancelled) setError(getRequestErrorMessage(requestError, 'Unable to load offers.'));
@@ -50,12 +41,10 @@ export function OffersPage() {
 
         void loadOffers();
         window.addEventListener(offersUpdatedEventName, loadOffers);
-        window.addEventListener(travelersUpdatedEventName, loadTravelers);
 
         return () => {
             cancelled = true;
             window.removeEventListener(offersUpdatedEventName, loadOffers);
-            window.removeEventListener(travelersUpdatedEventName, loadTravelers);
         };
     }, []);
 

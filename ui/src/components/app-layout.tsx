@@ -1,10 +1,11 @@
-import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
+import { type FormEvent, type ReactNode, useState } from 'react';
 import { Link, NavLink } from 'react-router';
 
 import { AppNavbar } from './app-navbar';
 import { ProfileModal } from './profile-modal';
 import { UploadOffersModal } from './upload-offers-modal';
-import { type Traveler, travelersApi } from '../api/travelers';
+import type { Traveler } from '../api/travelers';
+import { useTravelers } from '../app-data/travelers-context';
 
 type AppLayoutProps = {
     children: ReactNode;
@@ -12,63 +13,36 @@ type AppLayoutProps = {
 
 export function AppLayout({ children }: AppLayoutProps) {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
-    const [travelers, setTravelers] = useState<Traveler[]>([]);
+    const { addTraveler, isLoadingTravelers, travelers, travelersError } = useTravelers();
     const [isUploadOffersOpen, setIsUploadOffersOpen] = useState(false);
     const [isTravelersOpen, setIsTravelersOpen] = useState(true);
-    const [isTravelersLoading, setIsTravelersLoading] = useState(true);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
     const [isCreatingTraveler, setIsCreatingTraveler] = useState(false);
     const [newTravelerFirstName, setNewTravelerFirstName] = useState('');
     const [newTravelerLastName, setNewTravelerLastName] = useState('');
-    const [travelersError, setTravelersError] = useState<string | null>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const loadTravelers = async () => {
-            setIsTravelersLoading(true);
-            setTravelersError(null);
-
-            try {
-                const response = await travelersApi.list();
-                if (!cancelled) setTravelers(sortTravelers(response.travelers));
-            } catch (requestError) {
-                if (!cancelled) setTravelersError(getRequestErrorMessage(requestError, 'Unable to load travelers.'));
-            } finally {
-                if (!cancelled) setIsTravelersLoading(false);
-            }
-        };
-
-        void loadTravelers();
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    const [quickAddError, setQuickAddError] = useState<string | null>(null);
 
     const handleQuickAddTraveler = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        setTravelersError(null);
+        setQuickAddError(null);
 
         const firstName = newTravelerFirstName.trim();
         const lastName = newTravelerLastName.trim();
 
         if (!firstName || !lastName) {
-            setTravelersError('First and last name are required.');
+            setQuickAddError('First and last name are required.');
             return;
         }
 
         setIsCreatingTraveler(true);
 
         try {
-            const response = await travelersApi.create({ firstName, lastName });
-            setTravelers((currentTravelers) => sortTravelers([...currentTravelers, response.traveler]));
+            await addTraveler({ firstName, lastName });
             setNewTravelerFirstName('');
             setNewTravelerLastName('');
             setIsQuickAddOpen(false);
-            window.dispatchEvent(new Event(travelersUpdatedEventName));
         } catch (requestError) {
-            setTravelersError(getRequestErrorMessage(requestError, 'Unable to add traveler.'));
+            setQuickAddError(getRequestErrorMessage(requestError, 'Unable to add traveler.'));
         } finally {
             setIsCreatingTraveler(false);
         }
@@ -112,7 +86,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                         <div className="mt-2 space-y-3 pl-3">
                             <button
                                 className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-white/20 px-3 text-sm font-semibold text-blue-50 transition hover:bg-white/10 focus:outline-none focus:ring-4 focus:ring-[#45AEFC]/20 disabled:cursor-not-allowed disabled:opacity-60"
-                                disabled={travelers.length === 0 || isTravelersLoading}
+                                disabled={travelers.length === 0 || isLoadingTravelers}
                                 type="button"
                                 onClick={() => setIsUploadOffersOpen(true)}
                             >
@@ -147,11 +121,11 @@ export function AppLayout({ children }: AppLayoutProps) {
 
                         {isTravelersOpen ? (
                             <div className="mt-2 space-y-3 pl-3">
-                                {isTravelersLoading ? (
+                                {isLoadingTravelers ? (
                                     <p className="px-3 text-sm text-blue-100">Loading travelers...</p>
                                 ) : null}
 
-                                {!isTravelersLoading && travelers.length > 0 ? (
+                                {!isLoadingTravelers && travelers.length > 0 ? (
                                     <div className="space-y-1">
                                         {travelers.map((traveler) => (
                                             <div
@@ -164,15 +138,17 @@ export function AppLayout({ children }: AppLayoutProps) {
                                     </div>
                                 ) : null}
 
-                                {!isTravelersLoading && travelers.length === 0 ? (
+                                {!isLoadingTravelers && travelers.length === 0 ? (
                                     <p className="px-3 text-sm text-blue-100">No travelers yet.</p>
                                 ) : null}
                             </div>
                         ) : null}
 
                         <div className="mt-3 pl-3">
-                            {travelersError ? (
-                                <p className="mb-3 px-3 text-xs font-semibold text-red-100">{travelersError}</p>
+                            {travelersError || quickAddError ? (
+                                <p className="mb-3 px-3 text-xs font-semibold text-red-100">
+                                    {quickAddError ?? travelersError}
+                                </p>
                             ) : null}
 
                             {isQuickAddOpen ? (
@@ -286,7 +262,6 @@ export function AppLayout({ children }: AppLayoutProps) {
 }
 
 export const offersUpdatedEventName = 'cruise-deck:offers-updated';
-export const travelersUpdatedEventName = 'cruise-deck:travelers-updated';
 
 function ChevronIcon({ isOpen }: { isOpen: boolean }) {
     return (
@@ -306,10 +281,6 @@ function ChevronIcon({ isOpen }: { isOpen: boolean }) {
 
 function formatTravelerName(traveler: Traveler) {
     return [traveler.firstName, traveler.lastName].filter(Boolean).join(' ');
-}
-
-function sortTravelers(travelers: Traveler[]) {
-    return [...travelers].sort((first, second) => first.createdAt.localeCompare(second.createdAt));
 }
 
 function getRequestErrorMessage(error: unknown, fallback: string) {

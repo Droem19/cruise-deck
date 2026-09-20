@@ -1,14 +1,14 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { Navigate } from 'react-router';
 
-import { type Traveler, travelersApi } from '../api/travelers';
+import type { Traveler } from '../api/travelers';
+import { useTravelers } from '../app-data/travelers-context';
 import { useAuth } from '../auth/auth-context';
-import { AppLayout, travelersUpdatedEventName } from '../components/app-layout';
+import { AppLayout } from '../components/app-layout';
 
 export function TravelersPage() {
     const { user } = useAuth();
-    const [travelers, setTravelers] = useState<Traveler[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { addTraveler, deleteTraveler, isLoadingTravelers, travelers, updateTraveler } = useTravelers();
     const [isCreating, setIsCreating] = useState(false);
     const [editingTravelerId, setEditingTravelerId] = useState<string | null>(null);
     const [updatingTravelerId, setUpdatingTravelerId] = useState<string | null>(null);
@@ -18,32 +18,6 @@ export function TravelersPage() {
     const [editFirstName, setEditFirstName] = useState('');
     const [editLastName, setEditLastName] = useState('');
     const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const loadTravelers = async () => {
-            setIsLoading(true);
-            setError(null);
-
-            try {
-                const response = await travelersApi.list();
-                if (!cancelled) setTravelers(sortTravelers(response.travelers));
-            } catch (requestError) {
-                if (!cancelled) setError(getRequestErrorMessage(requestError, 'Unable to load travelers.'));
-            } finally {
-                if (!cancelled) setIsLoading(false);
-            }
-        };
-
-        void loadTravelers();
-        window.addEventListener(travelersUpdatedEventName, loadTravelers);
-
-        return () => {
-            cancelled = true;
-            window.removeEventListener(travelersUpdatedEventName, loadTravelers);
-        };
-    }, []);
 
     if (!user) return <Navigate to="/" replace />;
 
@@ -62,8 +36,7 @@ export function TravelersPage() {
         setIsCreating(true);
 
         try {
-            const response = await travelersApi.create({ firstName, lastName });
-            setTravelers((currentTravelers) => sortTravelers([...currentTravelers, response.traveler]));
+            await addTraveler({ firstName, lastName });
             setNewFirstName('');
             setNewLastName('');
         } catch (requestError) {
@@ -100,17 +73,10 @@ export function TravelersPage() {
         setUpdatingTravelerId(travelerId);
 
         try {
-            const response = await travelersApi.update(travelerId, {
+            await updateTraveler(travelerId, {
                 firstName,
                 lastName,
             });
-            setTravelers((currentTravelers) =>
-                sortTravelers(
-                    currentTravelers.map((traveler) =>
-                        traveler.travelerId === travelerId ? response.traveler : traveler
-                    )
-                )
-            );
             cancelEditing();
         } catch (requestError) {
             setError(getRequestErrorMessage(requestError, 'Unable to update traveler.'));
@@ -131,10 +97,7 @@ export function TravelersPage() {
         setDeletingTravelerId(travelerId);
 
         try {
-            await travelersApi.delete(travelerId);
-            setTravelers((currentTravelers) =>
-                currentTravelers.filter((traveler) => traveler.travelerId !== travelerId)
-            );
+            await deleteTraveler(travelerId);
             if (editingTravelerId === travelerId) cancelEditing();
         } catch (requestError) {
             setError(getRequestErrorMessage(requestError, 'Unable to delete traveler.'));
@@ -193,8 +156,8 @@ export function TravelersPage() {
                         <h2 className="text-lg font-semibold tracking-tight text-zinc-950">Travelers</h2>
                     </div>
 
-                    {isLoading ? <p className="p-5 text-sm text-zinc-500">Loading travelers...</p> : null}
-                    {!isLoading && travelers.length === 0 ? (
+                    {isLoadingTravelers ? <p className="p-5 text-sm text-zinc-500">Loading travelers...</p> : null}
+                    {!isLoadingTravelers && travelers.length === 0 ? (
                         <p className="p-5 text-sm text-zinc-500">No travelers have been added yet.</p>
                     ) : null}
 
@@ -308,10 +271,6 @@ export function TravelersPage() {
 
 function formatTravelerName(traveler: Traveler) {
     return [traveler.firstName, traveler.lastName].filter(Boolean).join(' ');
-}
-
-function sortTravelers(travelers: Traveler[]) {
-    return [...travelers].sort((first, second) => first.createdAt.localeCompare(second.createdAt));
 }
 
 function formatDate(value: string) {

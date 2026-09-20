@@ -17,6 +17,7 @@ Cruise Deck is a React app with Cognito-backed login, a typed Hono API, and AWS 
 - `ui` - Vite React app
 - `ui/src/pages` - Route-level pages for login, sign-up, forgot password, app, and not found states
 - `ui/src/auth` - Client-side auth provider and typed Hono API client
+- `ui/src/app-data` - App-level data providers and small client-side caches shared across protected routes
 - `api` - Hono serverless API
 - `api/src/lambdas` - Lambda entry points and route wiring
 - `api/src/contracts` - API request/response types and validators
@@ -28,6 +29,8 @@ API lib naming convention:
 
 - `*-service.ts` files own app/domain workflows, such as auth, travelers, and offers.
 - `*-helper.ts` files own lower-level shared infrastructure or framework utilities, such as API middleware, DynamoDB setup, and S3 file operations.
+
+`AppDataProvider` wraps the protected route tree and keeps route-shared app data such as travelers available across page changes without reloading it in each page.
 
 ## Getting Started (Local Development)
 
