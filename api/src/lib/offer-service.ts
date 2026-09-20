@@ -1,5 +1,12 @@
 import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
-import { DeleteCommand, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import {
+    BatchWriteCommand,
+    type BatchWriteCommandInput,
+    DeleteCommand,
+    GetCommand,
+    PutCommand,
+    QueryCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { HTTPException } from 'hono/http-exception';
 
 import { getDocumentClient, getTableName, userPk } from './dynamo-db-helper';
@@ -16,6 +23,7 @@ type OfferItem = UploadedOffer & {
 
 const offerSkPrefix = 'OFFER#';
 const offerSk = (offerId: string) => `${offerSkPrefix}${offerId}`;
+const sailingSk = (offerId: string) => `SAILING#${offerId}#`;
 
 const notFound = () => new HTTPException(404, { message: 'Offer not found.' });
 
@@ -113,11 +121,12 @@ export const getDownloadableOfferForUser = async (userSub: string, offerId: stri
     return getDownloadableFileFromS3(userSub, offer.offerId, offer.sourceS3Key, offer.fileName);
 };
 
-// Deletes an offer's S3 file and DynamoDB metadata record.
+// Deletes an offer's S3 file, parsed sailing rows, and DynamoDB metadata record.
 export const deleteOfferForUser = async (userSub: string, offerId: string) => {
     const offer = await getOfferItemForUser(userSub, offerId);
 
     await deleteFileFromS3(userSub, offer.sourceS3Key);
+    await deleteSailingsForOffer(userSub, offerId);
 
     try {
         await getDocumentClient().send(
@@ -154,4 +163,56 @@ const getOfferItemForUser = async (userSub: string, offerId: string) => {
     if (!isOfferItem(response.Item)) throw notFound();
 
     return response.Item;
+};
+
+// Removes all parsed sailing rows created from the uploaded offer.
+const deleteSailingsForOffer = async (userSub: string, offerId: string) => {
+    const tableName = getTableName();
+    const sailingKeys = await listSailingKeysForOffer(userSub, offerId);
+
+    for (let index = 0; index < sailingKeys.length; index += 25) {
+        let requestItems: NonNullable<BatchWriteCommandInput['RequestItems']> = {
+            [tableName]: sailingKeys.slice(index, index + 25).map((key) => ({
+                DeleteRequest: { Key: key },
+            })),
+        };
+
+        do {
+            const response = await getDocumentClient().send(new BatchWriteCommand({ RequestItems: requestItems }));
+            requestItems = response.UnprocessedItems ?? {};
+        } while ((requestItems[tableName]?.length ?? 0) > 0);
+    }
+};
+
+// Queries only DynamoDB keys so batch deletes don't read full sailing records.
+const listSailingKeysForOffer = async (userSub: string, offerId: string) => {
+    const tableName = getTableName();
+    const pk = userPk(userSub);
+    const keys: Array<{ PK: string; SK: string }> = [];
+    let exclusiveStartKey: Record<string, unknown> | undefined;
+
+    do {
+        const response = await getDocumentClient().send(
+            new QueryCommand({
+                TableName: tableName,
+                KeyConditionExpression: 'PK = :pk AND begins_with(SK, :skPrefix)',
+                ExpressionAttributeValues: {
+                    ':pk': pk,
+                    ':skPrefix': sailingSk(offerId),
+                },
+                ProjectionExpression: 'PK, SK',
+                ExclusiveStartKey: exclusiveStartKey,
+            })
+        );
+
+        for (const item of response.Items ?? []) {
+            if (typeof item.PK === 'string' && typeof item.SK === 'string') {
+                keys.push({ PK: item.PK, SK: item.SK });
+            }
+        }
+
+        exclusiveStartKey = response.LastEvaluatedKey;
+    } while (exclusiveStartKey);
+
+    return keys;
 };
