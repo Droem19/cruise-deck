@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router';
 
 import { type Sailing, sailingsApi } from '../api/sailings';
+import { useTravelers } from '../app-data/travelers-context';
 import { useAuth } from '../auth/auth-context';
 import { AppLayout } from '../components/app-layout';
 import { SailingTable } from '../components/sailing-table';
 
 export function AppPage() {
     const { user } = useAuth();
+    const { travelers } = useTravelers();
     const [sailings, setSailings] = useState<Sailing[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export function AppPage() {
                     </div>
                 ) : null}
 
-                <SailingTable isLoading={isLoading} sailings={sailings} />
+                <SailingTable isLoading={isLoading} sailings={sailings} travelers={travelers} />
             </section>
         </AppLayout>
     );

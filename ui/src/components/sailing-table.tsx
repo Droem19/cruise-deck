@@ -1,16 +1,19 @@
 import { useState } from 'react';
 
 import type { Sailing } from '../api/sailings';
+import type { Traveler } from '../api/travelers';
 
 type SailingTableProps = {
     isLoading: boolean;
     sailings: Sailing[];
+    travelers: Traveler[];
 };
 
-export function SailingTable({ isLoading, sailings }: SailingTableProps) {
+export function SailingTable({ isLoading, sailings, travelers }: SailingTableProps) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedShip, setSelectedShip] = useState('');
     const [selectedDeparturePort, setSelectedDeparturePort] = useState('');
+    const travelerById = new Map(travelers.map((traveler) => [traveler.travelerId, traveler]));
 
     const shipOptions = getUniqueOptions(sailings.map((sailing) => sailing.ship));
     const departurePortOptions = getUniqueOptions(sailings.map((sailing) => sailing.departurePort));
@@ -24,6 +27,7 @@ export function SailingTable({ isLoading, sailings }: SailingTableProps) {
                   sailing.roomType,
                   sailing.offerType,
                   sailing.offerCode,
+                  getTravelerName(sailing.travelerId, travelerById),
               ]
                   .join(' ')
                   .toLowerCase()
@@ -100,6 +104,7 @@ export function SailingTable({ isLoading, sailings }: SailingTableProps) {
                     <thead className="bg-zinc-50 text-xs uppercase text-zinc-500">
                         <tr>
                             <th className="px-4 py-3 font-semibold">Sail Date</th>
+                            <th className="px-4 py-3 font-semibold">Traveler</th>
                             <th className="px-4 py-3 font-semibold">Ship</th>
                             <th className="px-4 py-3 font-semibold">Departure Port</th>
                             <th className="px-4 py-3 font-semibold">Itinerary</th>
@@ -111,7 +116,7 @@ export function SailingTable({ isLoading, sailings }: SailingTableProps) {
                     <tbody className="divide-y divide-zinc-200">
                         {isLoading ? (
                             <tr>
-                                <td className="px-4 py-5 text-zinc-500" colSpan={7}>
+                                <td className="px-4 py-5 text-zinc-500" colSpan={8}>
                                     Loading sailings...
                                 </td>
                             </tr>
@@ -119,7 +124,7 @@ export function SailingTable({ isLoading, sailings }: SailingTableProps) {
 
                         {!isLoading && filteredSailings.length === 0 ? (
                             <tr>
-                                <td className="px-4 py-5 text-zinc-500" colSpan={7}>
+                                <td className="px-4 py-5 text-zinc-500" colSpan={8}>
                                     No sailings found.
                                 </td>
                             </tr>
@@ -130,6 +135,9 @@ export function SailingTable({ isLoading, sailings }: SailingTableProps) {
                                   <tr className="transition hover:bg-blue-50/50" key={sailing.sailingId}>
                                       <td className="whitespace-nowrap px-4 py-4 font-medium text-zinc-950">
                                           {formatDate(sailing.sailDateSort)}
+                                      </td>
+                                      <td className="whitespace-nowrap px-4 py-4 text-zinc-700">
+                                          {getTravelerName(sailing.travelerId, travelerById)}
                                       </td>
                                       <td className="px-4 py-4 text-zinc-700">{sailing.ship}</td>
                                       <td className="px-4 py-4 text-zinc-700">{sailing.departurePort}</td>
@@ -153,6 +161,12 @@ export function SailingTable({ isLoading, sailings }: SailingTableProps) {
 
 function getUniqueOptions(values: string[]) {
     return [...new Set(values)].sort((first, second) => first.localeCompare(second));
+}
+
+function getTravelerName(travelerId: string, travelerById: Map<string, Traveler>) {
+    const traveler = travelerById.get(travelerId);
+
+    return traveler ? [traveler.firstName, traveler.lastName].filter(Boolean).join(' ') : 'Unknown traveler';
 }
 
 function formatDate(value: string) {
