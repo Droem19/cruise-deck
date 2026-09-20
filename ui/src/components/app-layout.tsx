@@ -1,10 +1,10 @@
 import { type FormEvent, type ReactNode, useEffect, useState } from 'react';
 import { Link, NavLink } from 'react-router';
 
-import { type Traveler, travelersApi } from '../api/travelers';
 import { AppNavbar } from './app-navbar';
 import { ProfileModal } from './profile-modal';
 import { UploadOffersModal } from './upload-offers-modal';
+import { type Traveler, travelersApi } from '../api/travelers';
 
 type AppLayoutProps = {
     children: ReactNode;

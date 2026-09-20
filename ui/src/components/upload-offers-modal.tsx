@@ -1,8 +1,8 @@
 import { type DragEvent, type FormEvent, useEffect, useState } from 'react';
 
+import { AppModal } from './app-modal';
 import { offersApi } from '../api/offers';
 import type { Traveler } from '../api/travelers';
-import { AppModal } from './app-modal';
 
 type UploadOffersModalProps = {
     travelers: Traveler[];
