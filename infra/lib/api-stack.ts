@@ -130,6 +130,7 @@ export class APIStack extends cdk.Stack {
         const authLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/auth.ts');
         const offersLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/offers.ts');
         const parseOfferLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/parse-offer.ts');
+        const sailingsLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/sailings.ts');
         const travelersLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/travelers.ts');
 
         const allowedOrigins = [
@@ -195,6 +196,23 @@ export class APIStack extends cdk.Stack {
             },
         });
 
+        const sailingsLambda = new lambdaNodejs.NodejsFunction(this, 'SailingsLambda', {
+            functionName: 'cruise-deck-sailings',
+            entry: sailingsLambdaEntry,
+            handler: 'handler',
+            runtime: lambda.Runtime.NODEJS_22_X,
+            architecture: lambda.Architecture.ARM_64,
+            memorySize: 512,
+            timeout: cdk.Duration.seconds(10),
+            environment: {
+                ALLOWED_ORIGINS: allowedOrigins,
+                USER_POOL_ID: userPool.userPoolId,
+                USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
+                USER_POOL_REGION: this.region,
+                CRUISE_DECK_DATA_TABLE_NAME: dataTable.tableName,
+            },
+        });
+
         const travelersLambda = new lambdaNodejs.NodejsFunction(this, 'TravelersLambda', {
             functionName: 'cruise-deck-travelers',
             entry: travelersLambdaEntry,
@@ -218,6 +236,7 @@ export class APIStack extends cdk.Stack {
         dataTable.grantReadWriteData(authLambda);
         dataTable.grantReadWriteData(offersLambda);
         dataTable.grantReadWriteData(parseOfferLambda);
+        dataTable.grantReadData(sailingsLambda);
         dataTable.grantReadWriteData(travelersLambda);
 
         this.api = new apigatewayv2.HttpApi(this, 'AuthApi', {
@@ -243,6 +262,7 @@ export class APIStack extends cdk.Stack {
 
         const lambdaIntegration = new HttpLambdaIntegration('AuthLambdaIntegration', authLambda);
         const offersLambdaIntegration = new HttpLambdaIntegration('OffersLambdaIntegration', offersLambda);
+        const sailingsLambdaIntegration = new HttpLambdaIntegration('SailingsLambdaIntegration', sailingsLambda);
         const travelersLambdaIntegration = new HttpLambdaIntegration('TravelersLambdaIntegration', travelersLambda);
 
         this.api.addRoutes({
@@ -272,6 +292,12 @@ export class APIStack extends cdk.Stack {
             path: '/offers/{offerId}/download',
             methods: [apigatewayv2.HttpMethod.GET],
             integration: offersLambdaIntegration,
+        });
+
+        this.api.addRoutes({
+            path: '/sailings',
+            methods: [apigatewayv2.HttpMethod.GET],
+            integration: sailingsLambdaIntegration,
         });
 
         this.api.addRoutes({

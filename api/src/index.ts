@@ -9,9 +9,11 @@ export type {
     EmailPasswordRequest,
     EmailRequest,
     ListOffersResponse,
+    ListSailingsResponse,
     ListTravelersResponse,
     MeResponse,
     MessageResponse,
+    Sailing,
     SignUpRequest,
     SignUpResponse,
     Traveler,
@@ -22,4 +24,5 @@ export type {
     UploadOffersResponse,
 } from './contracts/types';
 export type { AuthApp } from './lambdas/auth';
+export type { SailingsApp } from './lambdas/sailings';
 export type { TravelersApp } from './lambdas/travelers';

@@ -52,6 +52,26 @@ export type UploadedOffer = {
     uploadedAt: string;
 };
 
+export type Sailing = {
+    sailingId: string;
+    offerId: string;
+    travelerId: string;
+    offerCode: string;
+    offerTitle: string;
+    ship: string;
+    departurePort: string;
+    sailDate: string;
+    sailDateSort: string;
+    itinerary: string;
+    roomType: string;
+    offerType: string;
+    parsedAt: string;
+};
+
+export type ListSailingsResponse = {
+    sailings: Sailing[];
+};
+
 export type ListOffersResponse = {
     offers: UploadedOffer[];
 };

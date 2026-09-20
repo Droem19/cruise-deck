@@ -11,10 +11,12 @@ if (existsSync(envPath)) {
 
 const { app: authApp } = await import('./lambdas/auth.js');
 const { app: offersApp } = await import('./lambdas/offers.js');
+const { app: sailingsApp } = await import('./lambdas/sailings.js');
 const { app: travelersApp } = await import('./lambdas/travelers.js');
 const app = new Hono();
 
 app.route('/', offersApp);
+app.route('/', sailingsApp);
 app.route('/', travelersApp);
 app.route('/', authApp);
 

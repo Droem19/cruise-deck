@@ -109,6 +109,7 @@ export class UIStack extends cdk.Stack {
                 me: apiBehavior,
                 offers: apiBehavior,
                 'offers/*': apiBehavior,
+                sailings: apiBehavior,
                 travelers: apiBehavior,
                 'travelers/*': apiBehavior,
             },
