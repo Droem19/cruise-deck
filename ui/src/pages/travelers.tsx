@@ -186,7 +186,6 @@ export function TravelersPage() {
                                                     <p className="truncate font-medium text-zinc-950">
                                                         {formatTravelerName(traveler)}
                                                     </p>
-                                                    <p className="mt-1 text-xs text-zinc-500">{traveler.travelerId}</p>
                                                 </td>
                                                 <td className="px-5 py-4">
                                                     {isEditing ? (

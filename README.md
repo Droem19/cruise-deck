@@ -179,6 +179,7 @@ The API stack creates:
 - HTTP API Gateway
 - `cruise-deck-auth` Lambda backed by the Hono API
 - `cruise-deck-offers` Lambda for offer uploads, listing, downloads, and deletes
+- `cruise-deck-parse-offer` Lambda triggered by new offer files in S3
 - `cruise-deck-travelers` Lambda for traveler management
 - Lambda integrations for API Gateway
 

@@ -6,6 +6,7 @@ import {
     aws_lambda as lambda,
     aws_lambda_nodejs as lambdaNodejs,
     aws_s3 as s3,
+    aws_s3_notifications as s3n,
 } from 'aws-cdk-lib';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import type { Construct } from 'constructs';
@@ -118,6 +119,7 @@ export class APIStack extends cdk.Stack {
         const stackSourceDir = path.dirname(fileURLToPath(import.meta.url));
         const authLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/auth.ts');
         const offersLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/offers.ts');
+        const parseOfferLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/parse-offer.ts');
         const travelersLambdaEntry = path.resolve(stackSourceDir, '../../api/src/lambdas/travelers.ts');
 
         const allowedOrigins = [
@@ -162,6 +164,19 @@ export class APIStack extends cdk.Stack {
             },
         });
 
+        const parseOfferLambda = new lambdaNodejs.NodejsFunction(this, 'ParseOfferLambda', {
+            functionName: 'cruise-deck-parse-offer',
+            entry: parseOfferLambdaEntry,
+            handler: 'handler',
+            runtime: lambda.Runtime.NODEJS_22_X,
+            architecture: lambda.Architecture.ARM_64,
+            memorySize: 512,
+            timeout: cdk.Duration.seconds(30),
+            environment: {
+                OFFERS_BUCKET_NAME: offersBucket.bucketName,
+            },
+        });
+
         const travelersLambda = new lambdaNodejs.NodejsFunction(this, 'TravelersLambda', {
             functionName: 'cruise-deck-travelers',
             entry: travelersLambdaEntry,
@@ -180,6 +195,8 @@ export class APIStack extends cdk.Stack {
         });
 
         offersBucket.grantReadWrite(offersLambda);
+        offersBucket.grantRead(parseOfferLambda);
+        offersBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(parseOfferLambda));
         dataTable.grantReadWriteData(authLambda);
         dataTable.grantReadWriteData(offersLambda);
         dataTable.grantReadWriteData(travelersLambda);
