@@ -1,3 +1,6 @@
+import { parseAndSaveOfferFromPdf } from '../lib/parsing-service';
+import { readFileFromS3 } from '../lib/s3-helper';
+
 type S3ObjectCreatedEvent = {
     Records?: Array<{
         eventName?: string;
@@ -27,7 +30,38 @@ export const handler = async (event: S3ObjectCreatedEvent) => {
             objectKey,
             objectSize,
         });
+
+        if (!objectKey || bucketName === 'unknown-bucket') continue;
+
+        const keyParts = parseOfferS3Key(objectKey);
+        const bytes = await readFileFromS3(bucketName, objectKey);
+        const parsedOffer = await parseAndSaveOfferFromPdf({
+            userSub: keyParts.userSub,
+            offerId: keyParts.offerId,
+            sourceS3Key: objectKey,
+            bytes,
+        });
+
+        console.log('Parsed offer PDF and stored sailing records', {
+            offerId: keyParts.offerId,
+            offerCode: parsedOffer.offerCode,
+            sailingCount: parsedOffer.sailings.length,
+            warningCount: parsedOffer.warnings.length,
+        });
     }
 
     return { recordsProcessed: records.length };
 };
+
+function parseOfferS3Key(key: string) {
+    const match = key.match(/^users\/([^/]+)\/offers\/([^/]+)\/.+$/);
+
+    if (!match) {
+        throw new Error(`Unexpected offer S3 key format: ${key}`);
+    }
+
+    return {
+        userSub: decodeURIComponent(match[1]),
+        offerId: match[2],
+    };
+}

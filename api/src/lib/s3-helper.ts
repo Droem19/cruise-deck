@@ -95,6 +95,17 @@ export const deleteFileFromS3 = async (userSub: string, sourceS3Key: string) => 
     );
 };
 
+// Reads one S3 object body as bytes for event-driven processing.
+export const readFileFromS3 = async (bucketName: string, key: string) => {
+    const response = await getS3Client().send(new GetObjectCommand({ Bucket: bucketName, Key: key }));
+
+    if (!response.Body || !('transformToByteArray' in response.Body)) {
+        throw new Error('Unable to read file from S3.');
+    }
+
+    return response.Body.transformToByteArray();
+};
+
 // Reads the configured private offers bucket name from the Lambda environment.
 const getOffersS3BucketName = () => {
     const bucketName = readEnv('OFFERS_BUCKET_NAME');

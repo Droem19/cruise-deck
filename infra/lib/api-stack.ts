@@ -18,6 +18,16 @@ type APIStackProps = cdk.StackProps & {
     siteDomain: string;
 };
 
+const copyPdfWorkerAfterBundling = (inputDir: string, outputDir: string) => [
+    [
+        'node',
+        '-e',
+        "\"const fs=require('node:fs');const path=require('node:path');const inputDir=process.argv[1];const outputDir=process.argv[2];const workerPath=require.resolve('pdfjs-dist/legacy/build/pdf.worker.mjs',{paths:[path.join(inputDir,'api'),inputDir]});fs.copyFileSync(workerPath,path.join(outputDir,'pdf.worker.mjs'));\"",
+        JSON.stringify(inputDir),
+        JSON.stringify(outputDir),
+    ].join(' '),
+];
+
 export class APIStack extends cdk.Stack {
     public readonly api: apigatewayv2.HttpApi;
 
@@ -170,10 +180,18 @@ export class APIStack extends cdk.Stack {
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_22_X,
             architecture: lambda.Architecture.ARM_64,
-            memorySize: 512,
-            timeout: cdk.Duration.seconds(30),
+            memorySize: 1024,
+            timeout: cdk.Duration.seconds(60),
+            bundling: {
+                commandHooks: {
+                    beforeBundling: () => [],
+                    beforeInstall: () => [],
+                    afterBundling: copyPdfWorkerAfterBundling,
+                },
+            },
             environment: {
                 OFFERS_BUCKET_NAME: offersBucket.bucketName,
+                CRUISE_DECK_DATA_TABLE_NAME: dataTable.tableName,
             },
         });
 
@@ -199,6 +217,7 @@ export class APIStack extends cdk.Stack {
         offersBucket.addEventNotification(s3.EventType.OBJECT_CREATED, new s3n.LambdaDestination(parseOfferLambda));
         dataTable.grantReadWriteData(authLambda);
         dataTable.grantReadWriteData(offersLambda);
+        dataTable.grantReadWriteData(parseOfferLambda);
         dataTable.grantReadWriteData(travelersLambda);
 
         this.api = new apigatewayv2.HttpApi(this, 'AuthApi', {
