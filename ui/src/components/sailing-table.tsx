@@ -104,13 +104,13 @@ export function SailingTable({ isLoading, sailings, travelers }: SailingTablePro
                     <thead className="bg-zinc-50 text-xs uppercase text-zinc-500">
                         <tr>
                             <th className="px-4 py-3 font-semibold">Sail Date</th>
-                            <th className="px-4 py-3 font-semibold">Traveler</th>
                             <th className="px-4 py-3 font-semibold">Ship</th>
                             <th className="px-4 py-3 font-semibold">Departure Port</th>
                             <th className="px-4 py-3 font-semibold">Itinerary</th>
                             <th className="px-4 py-3 font-semibold">Room Type</th>
                             <th className="px-4 py-3 font-semibold">Offer Type</th>
-                            <th className="px-4 py-3 font-semibold">Offer</th>
+                            <th className="px-4 py-3 font-semibold">Traveler</th>
+                            <th className="px-4 py-3 font-semibold">Offer Code</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-200">
@@ -136,14 +136,14 @@ export function SailingTable({ isLoading, sailings, travelers }: SailingTablePro
                                       <td className="whitespace-nowrap px-4 py-4 font-medium text-zinc-950">
                                           {formatDate(sailing.sailDateSort)}
                                       </td>
-                                      <td className="whitespace-nowrap px-4 py-4 text-zinc-700">
-                                          {getTravelerName(sailing.travelerId, travelerById)}
-                                      </td>
                                       <td className="px-4 py-4 text-zinc-700">{sailing.ship}</td>
                                       <td className="px-4 py-4 text-zinc-700">{sailing.departurePort}</td>
                                       <td className="px-4 py-4 text-zinc-700">{sailing.itinerary}</td>
                                       <td className="px-4 py-4 text-zinc-700">{sailing.roomType}</td>
                                       <td className="px-4 py-4 text-zinc-700">{sailing.offerType}</td>
+                                      <td className="whitespace-nowrap px-4 py-4 text-zinc-700">
+                                          {getTravelerName(sailing.travelerId, travelerById)}
+                                      </td>
                                       <td className="px-4 py-4 text-zinc-700">{sailing.offerCode}</td>
                                   </tr>
                               ))
