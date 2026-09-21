@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 import type { Sailing, SailingListFilters } from '../api/sailings';
 import type { Traveler } from '../api/travelers';
 import {
@@ -10,9 +12,13 @@ import {
 type SailingTableProps = {
     filters: SailingListFilters;
     isLoading: boolean;
+    pageIndex: number;
+    pageSize: number;
     sailings: Sailing[];
+    totalCount: number;
     travelers: Traveler[];
     onFiltersChange: (filters: SailingListFilters) => void;
+    onPageChange: (pageIndex: number) => void;
 };
 
 type GuestCount = 1 | 2;
@@ -20,7 +26,17 @@ type GuestCount = 1 | 2;
 const offerGuestCounts = [1, 2] satisfies GuestCount[];
 const roomTypeOptions = ['Interior', 'Interior - GTY', 'Ocean View', 'Ocean View - GTY', 'Balcony', 'Balcony - GTY'];
 
-export function SailingTable({ filters, isLoading, sailings, travelers, onFiltersChange }: SailingTableProps) {
+export function SailingTable({
+    filters,
+    isLoading,
+    pageIndex,
+    pageSize,
+    sailings,
+    totalCount,
+    travelers,
+    onFiltersChange,
+    onPageChange,
+}: SailingTableProps) {
     const selectedShips = filters.ships ?? [];
     const selectedDeparturePorts = filters.departurePorts ?? [];
     const selectedGuestCounts = (filters.guestCounts ?? []) as GuestCount[];
@@ -33,6 +49,11 @@ export function SailingTable({ filters, isLoading, sailings, travelers, onFilter
     const travelerById = new Map(travelers.map((traveler) => [traveler.travelerId, traveler]));
     const minimumNightCount = parseOptionalNightCount(minimumNights);
     const maximumNightCount = parseOptionalNightCount(maximumNights);
+    const pageStart = totalCount === 0 ? 0 : pageIndex * pageSize + 1;
+    const pageEnd = Math.min(pageIndex * pageSize + sailings.length, totalCount);
+    const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
+    const canShowPreviousPage = pageIndex > 0;
+    const canShowNextPage = pageEnd < totalCount;
 
     const updateFilters = (nextFilters: SailingListFilters) => {
         onFiltersChange({ ...filters, ...nextFilters });
@@ -185,8 +206,31 @@ export function SailingTable({ filters, isLoading, sailings, travelers, onFilter
                 </table>
             </div>
 
-            <div className="border-t border-zinc-200 px-4 py-3 text-sm text-zinc-500">
-                Showing {sailings.length} sailings
+            <div className="flex flex-col gap-3 border-t border-zinc-200 px-4 py-3 text-sm text-zinc-500 md:flex-row md:items-center md:justify-between">
+                <span>
+                    Showing {pageStart}-{pageEnd} of {totalCount} sailings
+                </span>
+                <div className="flex items-center gap-2">
+                    <button
+                        className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-300 bg-white px-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:hover:bg-white"
+                        type="button"
+                        disabled={isLoading || !canShowPreviousPage}
+                        onClick={() => onPageChange(pageIndex - 1)}
+                    >
+                        Previous
+                    </button>
+                    <span className="min-w-24 text-center text-sm font-medium text-zinc-600">
+                        Page {pageIndex + 1} of {pageCount}
+                    </span>
+                    <button
+                        className="inline-flex h-9 items-center justify-center rounded-md border border-zinc-300 bg-white px-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:text-zinc-400 disabled:hover:bg-white"
+                        type="button"
+                        disabled={isLoading || !canShowNextPage}
+                        onClick={() => onPageChange(pageIndex + 1)}
+                    >
+                        Next
+                    </button>
+                </div>
             </div>
         </section>
     );
@@ -198,6 +242,7 @@ type ShipFilterDropdownProps = {
 };
 
 function ShipFilterDropdown({ selectedShips, onSelectedShipsChange }: ShipFilterDropdownProps) {
+    const detailsRef = useCloseDetailsOnOutsideClick();
     const selectedShipSet = new Set(selectedShips);
 
     const toggleShip = (ship: string) => {
@@ -222,7 +267,7 @@ function ShipFilterDropdown({ selectedShips, onSelectedShipsChange }: ShipFilter
     return (
         <div className="relative text-xs font-semibold uppercase text-zinc-500">
             Ship
-            <details className="group mt-2">
+            <details className="group mt-2" ref={detailsRef}>
                 <summary className="flex h-10 cursor-pointer list-none items-center justify-between rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium normal-case text-zinc-950 outline-none transition marker:hidden focus:border-[#0B65CA] focus:ring-4 focus:ring-[#45AEFC]/25 [&::-webkit-details-marker]:hidden">
                     <span>{formatShipFilterLabel(selectedShips)}</span>
                     <span className="text-zinc-400 transition group-open:rotate-180">v</span>
@@ -301,6 +346,7 @@ function DeparturePortFilterDropdown({
     selectedDeparturePorts,
     onSelectedDeparturePortsChange,
 }: DeparturePortFilterDropdownProps) {
+    const detailsRef = useCloseDetailsOnOutsideClick();
     const selectedDeparturePortSet = new Set(selectedDeparturePorts);
 
     const toggleDeparturePort = (departurePort: string) => {
@@ -326,7 +372,7 @@ function DeparturePortFilterDropdown({
     return (
         <div className="relative text-xs font-semibold uppercase text-zinc-500">
             Departure Port
-            <details className="group mt-2">
+            <details className="group mt-2" ref={detailsRef}>
                 <summary className="flex h-10 cursor-pointer list-none items-center justify-between rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium normal-case text-zinc-950 outline-none transition marker:hidden focus:border-[#0B65CA] focus:ring-4 focus:ring-[#45AEFC]/25 [&::-webkit-details-marker]:hidden">
                     <span>{formatDeparturePortFilterLabel(selectedDeparturePorts)}</span>
                     <span className="text-zinc-400 transition group-open:rotate-180">v</span>
@@ -453,6 +499,7 @@ function TravelerFilterDropdown({
     travelers,
     onSelectedTravelerIdsChange,
 }: TravelerFilterDropdownProps) {
+    const detailsRef = useCloseDetailsOnOutsideClick();
     const selectedTravelerIdSet = new Set(selectedTravelerIds);
     const travelerById = new Map(travelers.map((traveler) => [traveler.travelerId, traveler]));
 
@@ -473,7 +520,7 @@ function TravelerFilterDropdown({
     return (
         <div className="relative text-xs font-semibold uppercase text-zinc-500">
             Traveler
-            <details className="group mt-2">
+            <details className="group mt-2" ref={detailsRef}>
                 <summary className="flex h-10 cursor-pointer list-none items-center justify-between rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium normal-case text-zinc-950 outline-none transition marker:hidden focus:border-[#0B65CA] focus:ring-4 focus:ring-[#45AEFC]/25 [&::-webkit-details-marker]:hidden">
                     <span>{formatTravelerFilterLabel(selectedTravelerIds, travelerById)}</span>
                     <span className="text-zinc-400 transition group-open:rotate-180">v</span>
@@ -527,6 +574,7 @@ function RoomTypeFilterDropdown({
     selectedRoomTypes,
     onSelectedRoomTypesChange,
 }: RoomTypeFilterDropdownProps) {
+    const detailsRef = useCloseDetailsOnOutsideClick();
     const selectedRoomTypeSet = new Set(selectedRoomTypes);
 
     const toggleRoomType = (roomType: string) => {
@@ -544,7 +592,7 @@ function RoomTypeFilterDropdown({
     return (
         <div className="relative text-xs font-semibold uppercase text-zinc-500">
             Room Type
-            <details className="group mt-2">
+            <details className="group mt-2" ref={detailsRef}>
                 <summary className="flex h-10 cursor-pointer list-none items-center justify-between rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium normal-case text-zinc-950 outline-none transition marker:hidden focus:border-[#0B65CA] focus:ring-4 focus:ring-[#45AEFC]/25 [&::-webkit-details-marker]:hidden">
                     <span>{formatRoomTypeFilterLabel(selectedRoomTypes)}</span>
                     <span className="text-zinc-400 transition group-open:rotate-180">v</span>
@@ -678,6 +726,38 @@ function parseOptionalNightCount(value: string) {
     const nightCount = Number.parseInt(trimmedValue, 10);
 
     return Number.isFinite(nightCount) && nightCount > 0 ? nightCount : null;
+}
+
+function useCloseDetailsOnOutsideClick() {
+    const detailsRef = useRef<HTMLDetailsElement>(null);
+
+    useEffect(() => {
+        const handlePointerDown = (event: PointerEvent) => {
+            const details = detailsRef.current;
+            if (!details?.open) return;
+
+            if (event.target instanceof Node && details.contains(event.target)) return;
+
+            details.open = false;
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+
+            const details = detailsRef.current;
+            if (details) details.open = false;
+        };
+
+        document.addEventListener('pointerdown', handlePointerDown);
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('pointerdown', handlePointerDown);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
+
+    return detailsRef;
 }
 
 function getUniqueOptions(values: string[]) {

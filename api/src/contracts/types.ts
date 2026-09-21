@@ -70,6 +70,7 @@ export type Sailing = {
 
 export type ListSailingsResponse = {
     sailings: Sailing[];
+    totalCount: number;
 };
 
 export type ListOffersResponse = {

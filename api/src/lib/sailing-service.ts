@@ -21,6 +21,11 @@ export type SailingFilters = {
     travelerIds?: string[];
 };
 
+export type SailingPagination = {
+    limit: number;
+    offset: number;
+};
+
 const sailingSkPrefix = 'SAILING#';
 
 const isSailingItem = (item: Record<string, unknown> | undefined): item is SailingItem => {
@@ -63,7 +68,11 @@ const toSailing = (item: Record<string, unknown> | undefined) => {
 };
 
 // Lists parsed sailing rows for the current user account.
-export const listSailingsForUser = async (userSub: string, filters: SailingFilters = {}) => {
+export const listSailingsForUser = async (
+    userSub: string,
+    filters: SailingFilters = {},
+    pagination: SailingPagination
+) => {
     const response = await getDocumentClient().send(
         new QueryCommand({
             TableName: getTableName(),
@@ -75,23 +84,30 @@ export const listSailingsForUser = async (userSub: string, filters: SailingFilte
         })
     );
 
-    return (response.Items ?? [])
+    const filteredSailings = (response.Items ?? [])
         .map((item) => toSailing(item))
         .filter((sailing): sailing is Sailing => sailing !== null)
         .filter((sailing) => matchesSailingFilters(sailing, filters))
         .sort((first, second) => first.sailDateSort.localeCompare(second.sailDateSort));
+
+    return {
+        sailings: filteredSailings.slice(pagination.offset, pagination.offset + pagination.limit),
+        totalCount: filteredSailings.length,
+    };
 };
 
 const matchesSailingFilters = (sailing: Sailing, filters: SailingFilters) => {
     const departurePortSet = new Set(
-        (filters.departurePorts ?? []).map((departurePort) => normalizeFilterValue(departurePort))
+        (filters.departurePorts ?? []).map((departurePort) => normalizeDeparturePortFilterValue(departurePort))
     );
     const guestCount = getOfferGuestCount(sailing.offerType);
     const nightCount = getItineraryNightCount(sailing.itinerary);
 
     const matchesShip = filters.ships?.length ? filters.ships.includes(sailing.ship) : true;
     const matchesDeparturePort =
-        departurePortSet.size > 0 ? departurePortSet.has(normalizeFilterValue(sailing.departurePort)) : true;
+        departurePortSet.size > 0
+            ? departurePortSet.has(normalizeDeparturePortFilterValue(sailing.departurePort))
+            : true;
     const matchesGuestCount = filters.guestCounts?.length
         ? guestCount !== null && filters.guestCounts.includes(guestCount)
         : true;
@@ -124,6 +140,10 @@ const normalizeFilterValue = (value: string) => {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase();
+};
+
+const normalizeDeparturePortFilterValue = (value: string) => {
+    return normalizeFilterValue(value).split(',')[0].replace(/\s+/g, ' ').trim();
 };
 
 const getOfferGuestCount = (offerType: string) => {

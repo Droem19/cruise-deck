@@ -5,7 +5,9 @@ import { cors } from 'hono/cors';
 import type { ListSailingsResponse } from '../contracts/types';
 import { errorHandler, getAllowedOrigins } from '../lib/api-helper';
 import { readUserFromCookies } from '../lib/auth-service';
-import { listSailingsForUser, type SailingFilters } from '../lib/sailing-service';
+import { listSailingsForUser, type SailingFilters, type SailingPagination } from '../lib/sailing-service';
+
+const defaultPageSize = 100;
 
 export const app = new Hono();
 
@@ -22,10 +24,12 @@ app.onError(errorHandler);
 
 const routes = app.get('/sailings', async (context) => {
     const user = await readUserFromCookies(context);
-    const filters = readSailingFilters(context.req.url);
-    const sailings = await listSailingsForUser(user.sub, filters);
+    const url = context.req.url;
+    const filters = readSailingFilters(url);
+    const pagination = readSailingPagination(url);
+    const response = await listSailingsForUser(user.sub, filters, pagination);
 
-    return context.json<ListSailingsResponse>({ sailings });
+    return context.json<ListSailingsResponse>(response);
 });
 
 export type SailingsApp = typeof routes;
@@ -51,6 +55,16 @@ const readSailingFilters = (url: string): SailingFilters => {
     };
 };
 
+const readSailingPagination = (url: string): SailingPagination => {
+    const searchParams = new URL(url).searchParams;
+    const requestedLimit = readPositiveIntegerFilter(searchParams, 'limit') ?? defaultPageSize;
+
+    return {
+        limit: Math.min(requestedLimit, defaultPageSize),
+        offset: readNonNegativeIntegerFilter(searchParams, 'offset') ?? 0,
+    };
+};
+
 const readDateFilter = (searchParams: URLSearchParams, key: string) => {
     const value = searchParams.get(key);
 
@@ -64,4 +78,13 @@ const readPositiveIntegerFilter = (searchParams: URLSearchParams, key: string) =
     const integerValue = Number.parseInt(value, 10);
 
     return Number.isFinite(integerValue) && integerValue > 0 ? integerValue : undefined;
+};
+
+const readNonNegativeIntegerFilter = (searchParams: URLSearchParams, key: string) => {
+    const value = searchParams.get(key);
+    if (!value) return undefined;
+
+    const integerValue = Number.parseInt(value, 10);
+
+    return Number.isFinite(integerValue) && integerValue >= 0 ? integerValue : undefined;
 };

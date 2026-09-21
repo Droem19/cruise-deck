@@ -7,8 +7,10 @@ export type SailingListFilters = {
     departurePorts?: string[];
     departureStartDate?: string;
     guestCounts?: number[];
+    limit?: number;
     maximumNights?: string;
     minimumNights?: string;
+    offset?: number;
     roomTypes?: string[];
     ships?: string[];
     travelerIds?: string[];
@@ -32,8 +34,10 @@ function toSailingFilterQueryString(filters: SailingListFilters) {
     appendValues(searchParams, 'travelerId', filters.travelerIds);
     appendValue(searchParams, 'departureEndDate', filters.departureEndDate);
     appendValue(searchParams, 'departureStartDate', filters.departureStartDate);
+    appendNumber(searchParams, 'limit', filters.limit);
     appendValue(searchParams, 'maximumNights', filters.maximumNights);
     appendValue(searchParams, 'minimumNights', filters.minimumNights);
+    appendNumber(searchParams, 'offset', filters.offset);
 
     const queryString = searchParams.toString();
 
@@ -42,6 +46,10 @@ function toSailingFilterQueryString(filters: SailingListFilters) {
 
 function appendValue(searchParams: URLSearchParams, key: string, value: string | undefined) {
     if (value) searchParams.append(key, value);
+}
+
+function appendNumber(searchParams: URLSearchParams, key: string, value: number | undefined) {
+    if (value !== undefined) searchParams.append(key, String(value));
 }
 
 function appendValues(searchParams: URLSearchParams, key: string, values: string[] | undefined) {

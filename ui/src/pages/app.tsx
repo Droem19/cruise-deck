@@ -18,12 +18,15 @@ const initialSailingFilters = {
     ships: [],
     travelerIds: [],
 } satisfies SailingListFilters;
+const sailingPageSize = 100;
 
 export function AppPage() {
     const { user } = useAuth();
     const { travelers } = useTravelers();
     const [sailings, setSailings] = useState<Sailing[]>([]);
     const [sailingFilters, setSailingFilters] = useState<SailingListFilters>(initialSailingFilters);
+    const [sailingPageIndex, setSailingPageIndex] = useState(0);
+    const [totalSailingCount, setTotalSailingCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -35,8 +38,15 @@ export function AppPage() {
             setError(null);
 
             try {
-                const response = await sailingsApi.list(sailingFilters);
-                if (!cancelled) setSailings(response.sailings);
+                const response = await sailingsApi.list({
+                    ...sailingFilters,
+                    limit: sailingPageSize,
+                    offset: sailingPageIndex * sailingPageSize,
+                });
+                if (!cancelled) {
+                    setSailings(response.sailings);
+                    setTotalSailingCount(response.totalCount);
+                }
             } catch (requestError) {
                 if (!cancelled) setError(getRequestErrorMessage(requestError, 'Unable to load sailings.'));
             } finally {
@@ -49,7 +59,12 @@ export function AppPage() {
         return () => {
             cancelled = true;
         };
-    }, [sailingFilters]);
+    }, [sailingFilters, sailingPageIndex]);
+
+    const handleSailingFiltersChange = (filters: SailingListFilters) => {
+        setSailingFilters(filters);
+        setSailingPageIndex(0);
+    };
 
     if (!user) return <Navigate to="/" replace />;
 
@@ -70,9 +85,13 @@ export function AppPage() {
                 <SailingTable
                     filters={sailingFilters}
                     isLoading={isLoading}
+                    pageIndex={sailingPageIndex}
+                    pageSize={sailingPageSize}
                     sailings={sailings}
+                    totalCount={totalSailingCount}
                     travelers={travelers}
-                    onFiltersChange={setSailingFilters}
+                    onFiltersChange={handleSailingFiltersChange}
+                    onPageChange={setSailingPageIndex}
                 />
             </section>
         </AppLayout>
