@@ -50,6 +50,7 @@ const readSailingFilters = (url: string): SailingFilters => {
         maximumNights: readPositiveIntegerFilter(searchParams, 'maximumNights'),
         minimumNights: readPositiveIntegerFilter(searchParams, 'minimumNights'),
         roomTypes: searchParams.getAll('roomType'),
+        sharedByTravelerIds: searchParams.getAll('sharedByTravelerId'),
         ships: searchParams.getAll('ship'),
         travelerIds: searchParams.getAll('travelerId'),
     };

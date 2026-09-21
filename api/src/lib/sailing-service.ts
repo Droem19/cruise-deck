@@ -17,6 +17,7 @@ export type SailingFilters = {
     maximumNights?: number;
     minimumNights?: number;
     roomTypes?: string[];
+    sharedByTravelerIds?: string[];
     ships?: string[];
     travelerIds?: string[];
 };
@@ -84,16 +85,59 @@ export const listSailingsForUser = async (
         })
     );
 
-    const filteredSailings = (response.Items ?? [])
+    const matchingSailings = (response.Items ?? [])
         .map((item) => toSailing(item))
         .filter((sailing): sailing is Sailing => sailing !== null)
         .filter((sailing) => matchesSailingFilters(sailing, filters))
         .sort((first, second) => first.sailDateSort.localeCompare(second.sailDateSort));
+    const sharedByTravelerIds = filters.sharedByTravelerIds ?? [];
+    const filteredSailings = sortSailings(
+        filterSharedSailings(matchingSailings, sharedByTravelerIds),
+        sharedByTravelerIds
+    );
 
     return {
         sailings: filteredSailings.slice(pagination.offset, pagination.offset + pagination.limit),
         totalCount: filteredSailings.length,
     };
+};
+
+const filterSharedSailings = (sailings: Sailing[], sharedByTravelerIds: string[]) => {
+    if (sharedByTravelerIds.length < 2) return sailings;
+
+    const sharedTravelerIdSet = new Set(sharedByTravelerIds);
+    const travelerIdsByCruiseKey = new Map<string, Set<string>>();
+
+    for (const sailing of sailings) {
+        if (!sharedTravelerIdSet.has(sailing.travelerId)) continue;
+
+        const cruiseKey = getCruiseKey(sailing);
+        const travelerIds = travelerIdsByCruiseKey.get(cruiseKey) ?? new Set<string>();
+        travelerIds.add(sailing.travelerId);
+        travelerIdsByCruiseKey.set(cruiseKey, travelerIds);
+    }
+
+    const sharedCruiseKeys = new Set(
+        [...travelerIdsByCruiseKey.entries()]
+            .filter(([, travelerIds]) => sharedByTravelerIds.every((travelerId) => travelerIds.has(travelerId)))
+            .map(([cruiseKey]) => cruiseKey)
+    );
+
+    return sailings.filter((sailing) => sharedCruiseKeys.has(getCruiseKey(sailing)));
+};
+
+const sortSailings = (sailings: Sailing[], sharedByTravelerIds: string[]) => {
+    if (sharedByTravelerIds.length < 2) return sailings;
+
+    return [...sailings].sort((first, second) => {
+        const cruiseComparison = getCruiseKey(first).localeCompare(getCruiseKey(second));
+        if (cruiseComparison !== 0) return cruiseComparison;
+
+        const travelerComparison = first.travelerId.localeCompare(second.travelerId);
+        if (travelerComparison !== 0) return travelerComparison;
+
+        return first.roomType.localeCompare(second.roomType);
+    });
 };
 
 const matchesSailingFilters = (sailing: Sailing, filters: SailingFilters) => {
@@ -144,6 +188,15 @@ const normalizeFilterValue = (value: string) => {
 
 const normalizeDeparturePortFilterValue = (value: string) => {
     return normalizeFilterValue(value).split(',')[0].replace(/\s+/g, ' ').trim();
+};
+
+const getCruiseKey = (sailing: Sailing) => {
+    return [
+        sailing.sailDateSort,
+        normalizeFilterValue(sailing.ship),
+        normalizeDeparturePortFilterValue(sailing.departurePort),
+        normalizeFilterValue(sailing.itinerary),
+    ].join('|');
 };
 
 const getOfferGuestCount = (offerType: string) => {

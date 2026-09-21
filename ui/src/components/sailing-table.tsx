@@ -40,6 +40,7 @@ export function SailingTable({
     const selectedShips = filters.ships ?? [];
     const selectedDeparturePorts = filters.departurePorts ?? [];
     const selectedGuestCounts = (filters.guestCounts ?? []) as GuestCount[];
+    const selectedSharedTravelerIds = filters.sharedByTravelerIds ?? [];
     const selectedTravelerIds = filters.travelerIds ?? [];
     const selectedRoomTypes = filters.roomTypes ?? [];
     const departureStartDate = filters.departureStartDate ?? '';
@@ -54,6 +55,8 @@ export function SailingTable({
     const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
     const canShowPreviousPage = pageIndex > 0;
     const canShowNextPage = pageEnd < totalCount;
+    const isSharedCruiseFilterActive = selectedSharedTravelerIds.length >= 2;
+    const sharedCruiseGroupIndexByKey = getSharedCruiseGroupIndexByKey(sailings, isSharedCruiseFilterActive);
 
     const updateFilters = (nextFilters: SailingListFilters) => {
         onFiltersChange({ ...filters, ...nextFilters });
@@ -106,7 +109,7 @@ export function SailingTable({
     return (
         <section className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-200 p-4">
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-8">
                     <DepartureDateFilter
                         endDate={departureEndDate}
                         startDate={departureStartDate}
@@ -135,6 +138,11 @@ export function SailingTable({
                     <OfferGuestFilter
                         selectedGuestCounts={selectedGuestCounts}
                         onSelectedGuestCountsChange={(guestCounts) => updateFilters({ guestCounts })}
+                    />
+                    <SharedCruiseFilterDropdown
+                        selectedTravelerIds={selectedSharedTravelerIds}
+                        travelers={travelers}
+                        onSelectedTravelerIdsChange={(sharedByTravelerIds) => updateFilters({ sharedByTravelerIds })}
                     />
                     <TravelerFilterDropdown
                         selectedTravelerIds={selectedTravelerIds}
@@ -185,22 +193,33 @@ export function SailingTable({
                         ) : null}
 
                         {!isLoading
-                            ? sailings.map((sailing) => (
-                                  <tr className="transition hover:bg-blue-50/50" key={sailing.sailingId}>
-                                      <td className="whitespace-nowrap px-4 py-4 font-medium text-zinc-950">
-                                          {formatDate(sailing.sailDateSort)}
-                                      </td>
-                                      <td className="px-4 py-4 text-zinc-700">{sailing.ship}</td>
-                                      <td className="px-4 py-4 text-zinc-700">{sailing.departurePort}</td>
-                                      <td className="px-4 py-4 text-zinc-700">{sailing.itinerary}</td>
-                                      <td className="px-4 py-4 text-zinc-700">{sailing.roomType}</td>
-                                      <td className="px-4 py-4 text-zinc-700">{sailing.offerType}</td>
-                                      <td className="whitespace-nowrap px-4 py-4 text-zinc-700">
-                                          {getTravelerName(sailing.travelerId, travelerById)}
-                                      </td>
-                                      <td className="px-4 py-4 text-zinc-700">{sailing.offerCode}</td>
-                                  </tr>
-                              ))
+                            ? sailings.map((sailing) => {
+                                  const sharedCruiseGroupIndex = sharedCruiseGroupIndexByKey.get(getCruiseKey(sailing));
+                                  const isTintedSharedCruiseGroup =
+                                      isSharedCruiseFilterActive &&
+                                      sharedCruiseGroupIndex !== undefined &&
+                                      sharedCruiseGroupIndex % 2 === 1;
+
+                                  return (
+                                      <tr
+                                          className={`transition ${isTintedSharedCruiseGroup ? 'border-l-4 border-[#0B65CA] bg-blue-100/70 hover:bg-blue-100' : 'border-l-4 border-transparent hover:bg-blue-50/50'}`}
+                                          key={sailing.sailingId}
+                                      >
+                                          <td className="whitespace-nowrap px-4 py-4 font-medium text-zinc-950">
+                                              {formatDate(sailing.sailDateSort)}
+                                          </td>
+                                          <td className="px-4 py-4 text-zinc-700">{sailing.ship}</td>
+                                          <td className="px-4 py-4 text-zinc-700">{sailing.departurePort}</td>
+                                          <td className="px-4 py-4 text-zinc-700">{sailing.itinerary}</td>
+                                          <td className="px-4 py-4 text-zinc-700">{sailing.roomType}</td>
+                                          <td className="px-4 py-4 text-zinc-700">{sailing.offerType}</td>
+                                          <td className="whitespace-nowrap px-4 py-4 text-zinc-700">
+                                              {getTravelerName(sailing.travelerId, travelerById)}
+                                          </td>
+                                          <td className="px-4 py-4 text-zinc-700">{sailing.offerCode}</td>
+                                      </tr>
+                                  );
+                              })
                             : null}
                     </tbody>
                 </table>
@@ -563,6 +582,83 @@ function formatTravelerFilterLabel(selectedTravelerIds: string[], travelerById: 
     return `${selectedTravelerIds.length} travelers selected`;
 }
 
+type SharedCruiseFilterDropdownProps = {
+    selectedTravelerIds: string[];
+    travelers: Traveler[];
+    onSelectedTravelerIdsChange: (travelerIds: string[]) => void;
+};
+
+function SharedCruiseFilterDropdown({
+    selectedTravelerIds,
+    travelers,
+    onSelectedTravelerIdsChange,
+}: SharedCruiseFilterDropdownProps) {
+    const detailsRef = useCloseDetailsOnOutsideClick();
+    const selectedTravelerIdSet = new Set(selectedTravelerIds);
+    const travelerById = new Map(travelers.map((traveler) => [traveler.travelerId, traveler]));
+
+    const toggleTraveler = (travelerId: string) => {
+        onSelectedTravelerIdsChange(
+            selectedTravelerIdSet.has(travelerId)
+                ? selectedTravelerIds.filter((selectedTravelerId) => selectedTravelerId !== travelerId)
+                : [...selectedTravelerIds, travelerId]
+        );
+    };
+
+    const selectAllTravelers = () => {
+        onSelectedTravelerIdsChange(travelers.map((traveler) => traveler.travelerId));
+    };
+
+    return (
+        <div className="relative text-xs font-semibold uppercase text-zinc-500">
+            Shared Cruise
+            <details className="group mt-2" ref={detailsRef}>
+                <summary className="flex h-10 cursor-pointer list-none items-center justify-between rounded-md border border-zinc-300 bg-white px-3 text-sm font-medium normal-case text-zinc-950 outline-none transition marker:hidden focus:border-[#0B65CA] focus:ring-4 focus:ring-[#45AEFC]/25 [&::-webkit-details-marker]:hidden">
+                    <span>{formatSharedCruiseFilterLabel(selectedTravelerIds, travelerById)}</span>
+                    <span className="text-zinc-400 transition group-open:rotate-180">v</span>
+                </summary>
+                <div className="absolute z-20 mt-2 max-h-96 w-full overflow-y-auto rounded-md border border-zinc-200 bg-white p-2 text-sm normal-case text-zinc-950 shadow-lg">
+                    <button
+                        className="mb-2 h-9 w-full rounded-md px-2 text-left text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:text-zinc-400"
+                        type="button"
+                        disabled={travelers.length < 2}
+                        onClick={
+                            selectedTravelerIds.length > 0 ? () => onSelectedTravelerIdsChange([]) : selectAllTravelers
+                        }
+                    >
+                        {selectedTravelerIds.length > 0 ? 'Clear Shared Filter' : 'All Travelers'}
+                    </button>
+                    {travelers.map((traveler) => (
+                        <label
+                            className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-zinc-700 transition hover:bg-zinc-50"
+                            key={traveler.travelerId}
+                        >
+                            <input
+                                className="h-4 w-4 accent-[#0B65CA]"
+                                type="checkbox"
+                                checked={selectedTravelerIdSet.has(traveler.travelerId)}
+                                onChange={() => toggleTraveler(traveler.travelerId)}
+                            />
+                            <span>{getTravelerName(traveler.travelerId, travelerById)}</span>
+                        </label>
+                    ))}
+                </div>
+            </details>
+        </div>
+    );
+}
+
+function formatSharedCruiseFilterLabel(selectedTravelerIds: string[], travelerById: Map<string, Traveler>) {
+    if (selectedTravelerIds.length < 2) return 'Any Cruise';
+    if (selectedTravelerIds.length === 2) {
+        return selectedTravelerIds
+            .map((travelerId) => getTravelerName(travelerId, travelerById).split(' ')[0])
+            .join(' + ');
+    }
+
+    return `${selectedTravelerIds.length} travelers selected`;
+}
+
 type RoomTypeFilterDropdownProps = {
     roomTypes: string[];
     selectedRoomTypes: string[];
@@ -726,6 +822,40 @@ function parseOptionalNightCount(value: string) {
     const nightCount = Number.parseInt(trimmedValue, 10);
 
     return Number.isFinite(nightCount) && nightCount > 0 ? nightCount : null;
+}
+
+function getSharedCruiseGroupIndexByKey(sailings: Sailing[], isSharedCruiseFilterActive: boolean) {
+    const groupIndexByKey = new Map<string, number>();
+    if (!isSharedCruiseFilterActive) return groupIndexByKey;
+
+    for (const sailing of sailings) {
+        const cruiseKey = getCruiseKey(sailing);
+        if (!groupIndexByKey.has(cruiseKey)) {
+            groupIndexByKey.set(cruiseKey, groupIndexByKey.size);
+        }
+    }
+
+    return groupIndexByKey;
+}
+
+function getCruiseKey(sailing: Sailing) {
+    return [
+        sailing.sailDateSort,
+        normalizeFilterValue(sailing.ship),
+        normalizeDeparturePortFilterValue(sailing.departurePort),
+        normalizeFilterValue(sailing.itinerary),
+    ].join('|');
+}
+
+function normalizeDeparturePortFilterValue(value: string) {
+    return normalizeFilterValue(value).split(',')[0].replace(/\s+/g, ' ').trim();
+}
+
+function normalizeFilterValue(value: string) {
+    return value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
 }
 
 function useCloseDetailsOnOutsideClick() {

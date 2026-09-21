@@ -15,6 +15,7 @@ const initialSailingFilters = {
     maximumNights: '',
     minimumNights: '',
     roomTypes: [],
+    sharedByTravelerIds: [],
     ships: [],
     travelerIds: [],
 } satisfies SailingListFilters;

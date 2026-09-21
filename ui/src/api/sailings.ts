@@ -12,6 +12,7 @@ export type SailingListFilters = {
     minimumNights?: string;
     offset?: number;
     roomTypes?: string[];
+    sharedByTravelerIds?: string[];
     ships?: string[];
     travelerIds?: string[];
 };
@@ -30,6 +31,7 @@ function toSailingFilterQueryString(filters: SailingListFilters) {
     appendValues(searchParams, 'departurePort', filters.departurePorts);
     appendValues(searchParams, 'guestCount', filters.guestCounts?.map(String));
     appendValues(searchParams, 'roomType', filters.roomTypes);
+    appendValues(searchParams, 'sharedByTravelerId', filters.sharedByTravelerIds);
     appendValues(searchParams, 'ship', filters.ships);
     appendValues(searchParams, 'travelerId', filters.travelerIds);
     appendValue(searchParams, 'departureEndDate', filters.departureEndDate);
